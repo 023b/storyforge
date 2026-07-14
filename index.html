@@ -17,6 +17,18 @@
     --panel:#000000;--shadow:0 4px 20px rgba(0,0,0,0.6);--radius:6px;
     --char-a:#e8c07d;--char-b:#7dc4e8;--char-c:#e87d9e;--char-d:#8de87d;--char-e:#c47de8;--char-f:#e8a97d;
   }
+  [data-theme="light"]{
+    --bg:#f7f4ef;--surface:#ffffff;--surface2:#f0ece4;--surface3:#e8e2d6;--border:#d8d0c4;--border2:#c4bbab;
+    --text:#1a1714;--text2:#5a5550;--text3:#8a8480;
+    --accent:#a8763f;--accent-dim:#f0e2cc;--accent-text:#fff;
+    --eg:#c0392b;--eg-bg:rgba(192,57,43,0.12);
+    --es:#1a5276;--es-bg:rgba(26,82,118,0.12);
+    --est:#6c3483;--est-bg:rgba(108,52,131,0.12);
+    --ep:#145a32;--ep-bg:rgba(20,90,50,0.12);
+    --ew:#784212;--ew-bg:rgba(120,66,18,0.12);
+    --panel:#ffffff;--shadow:0 1px 4px rgba(0,0,0,0.1);
+    --char-a:#a8763f;--char-b:#2d7fa8;--char-c:#a83f68;--char-d:#3f8a3f;--char-e:#7a3fa8;--char-f:#a86a3f;
+  }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Iowan Old Style','Palatino Linotype',Georgia,serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
   ::-webkit-scrollbar{width:6px;height:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
@@ -234,7 +246,7 @@
   body.focus-mode-sf #sidebar{width:0;border-left:none;}
 </style>
 </head>
-<body>
+<body data-theme="dark">
 <!-- API KEY MODAL -->
 <div id="api-modal" class="modal-bg">
   <div class="mbox">
@@ -342,6 +354,9 @@
   <input class="tb-num" id="fsz" type="number" value="17" min="10" max="36" onchange="chSize(this.value)" title="Font size"/>
   <button class="tb-btn" id="foc-btn" onclick="toggleFocus()" title="Focus mode">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>Focus
+  </button>
+  <button class="tb-btn" id="thm-btn" onclick="toggleTheme()" title="Toggle theme">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>Light
   </button>
   <div class="tb-sep"></div>
   <select class="tb-sel" id="mdl-sel" style="max-width:200px;">
@@ -517,51 +532,103 @@ const tip=document.getElementById('tip');
 const chTitleInput=document.getElementById('ch-title-input');
 
 // ===================================================================
-// MODEL LIST — fetched live from OpenRouter so it never goes stale
+// MODEL LIST — probed live against OpenRouter; only models that
+// actually respond successfully right now are offered.
 // ===================================================================
-const FALLBACK_MODELS=[
-  {id:'meta-llama/llama-3.3-70b-instruct:free',name:'Llama 3.3 70B (free)'},
-  {id:'google/gemini-2.0-flash-exp:free',name:'Gemini 2.0 Flash (free)'},
-  {id:'deepseek/deepseek-chat:free',name:'DeepSeek Chat (free)'},
-  {id:'google/gemini-2.5-flash',name:'Gemini 2.5 Flash'},
-  {id:'openai/gpt-4o-mini',name:'GPT-4o Mini'}
+const FREE_CANDIDATES=[
+  {id:'meta-llama/llama-3.3-70b-instruct:free',name:'Llama 3.3 70B'},
+  {id:'google/gemini-2.0-flash-exp:free',name:'Gemini 2.0 Flash'},
+  {id:'deepseek/deepseek-chat:free',name:'DeepSeek Chat'},
+  {id:'deepseek/deepseek-r1:free',name:'DeepSeek R1'},
+  {id:'qwen/qwen-2.5-72b-instruct:free',name:'Qwen 2.5 72B'},
+  {id:'mistralai/mistral-small-3.1-24b-instruct:free',name:'Mistral Small 3.1'},
+  {id:'meta-llama/llama-4-scout:free',name:'Llama 4 Scout'},
+  {id:'nvidia/llama-3.1-nemotron-70b-instruct:free',name:'Nemotron 70B'}
 ];
+const PAID_CANDIDATES=[
+  {id:'openai/gpt-4o-mini',name:'GPT-4o Mini'},
+  {id:'google/gemini-2.5-flash',name:'Gemini 2.5 Flash'},
+  {id:'anthropic/claude-3.5-haiku',name:'Claude 3.5 Haiku'}
+];
+async function probeModel(id){
+  try{
+    const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey,'HTTP-Referer':'https://023b.github.io/storyforge','X-Title':'StoryForge'},
+      body:JSON.stringify({model:id, messages:[{role:'user',content:'hi'}], max_tokens:1})
+    });
+    return r.ok;
+  }catch(e){ return false; }
+}
 async function loadModelList(){
   const sel=document.getElementById('mdl-sel');
   const savedModel=ls('sf_model')||'';
-  let models=[];
-  try{
-    const r=await fetch('https://openrouter.ai/api/v1/models');
-    if(!r.ok) throw new Error('bad status');
-    const data=await r.json();
-    const all=(data.data||[]);
-    // Free-tier models (id ends :free, or both prompt+completion pricing are 0)
-    const free=all.filter(m=>{
-      const p=m.pricing||{};
-      return m.id.endsWith(':free') || (parseFloat(p.prompt||'1')===0 && parseFloat(p.completion||'1')===0);
-    }).map(m=>({id:m.id,name:m.name+' (free)'}));
-    // A few cheap, well-known paid models as extra options (top of the non-free list by name match)
-    const wantPaid=['openai/gpt-4o-mini','google/gemini-2.5-flash','anthropic/claude-3.5-haiku'];
-    const paid=all.filter(m=>wantPaid.includes(m.id)).map(m=>({id:m.id,name:m.name}));
-    models=[...free.slice(0,15), ...paid];
-    if(!models.length) throw new Error('empty');
-  }catch(e){
-    models=FALLBACK_MODELS;
+  sel.innerHTML='<option value="">Loading models…</option>';
+  if(!apiKey){
+    // No key yet — show unverified fallback list, will re-verify once key is saved
+    populateModelSelect(FREE_CANDIDATES.slice(0,5), savedModel);
+    return;
   }
+  const results=await Promise.all([...FREE_CANDIDATES, ...PAID_CANDIDATES].map(async m=>({...m, ok:await probeModel(m.id)})));
+  let free=results.filter((m,i)=>m.ok && i<FREE_CANDIDATES.length).slice(0,4);
+  let paid=results.filter((m,i)=>m.ok && i>=FREE_CANDIDATES.length).slice(0,3);
+  free=free.map(m=>({...m,name:m.name+' (free)'}));
+  const models=[...free, ...paid];
+  if(!models.length){
+    setSt('No models responded — try Custom model');
+  }
+  populateModelSelect(models, savedModel);
+}
+function populateModelSelect(models, savedModel){
+  const sel=document.getElementById('mdl-sel');
   sel.innerHTML='';
   models.forEach(m=>{
     const o=document.createElement('option');
     o.value=m.id; o.textContent=m.name;
     sel.appendChild(o);
   });
+  const customOpt=document.createElement('option');
+  customOpt.value='__custom__'; customOpt.textContent='Custom model…';
+  sel.appendChild(customOpt);
   if(savedModel && models.some(m=>m.id===savedModel)) sel.value=savedModel;
-  sel.addEventListener('change',()=>sv('sf_model',sel.value));
+  else if(savedModel) { sel.value='__custom__'; showCustomModelInput(savedModel); }
+  sel.onchange=()=>{
+    if(sel.value==='__custom__'){ showCustomModelInput(''); }
+    else { hideCustomModelInput(); sv('sf_model',sel.value); }
+  };
+}
+function showCustomModelInput(prefill){
+  let inp=document.getElementById('custom-mdl-in');
+  if(!inp){
+    inp=document.createElement('input');
+    inp.id='custom-mdl-in'; inp.type='text'; inp.placeholder='e.g. openai/gpt-4o';
+    inp.className='tb-sel'; inp.style.maxWidth='170px';
+    inp.addEventListener('change',()=>{ if(inp.value.trim()) sv('sf_model',inp.value.trim()); });
+    document.getElementById('mdl-sel').insertAdjacentElement('afterend',inp);
+  }
+  inp.value=prefill; inp.style.display='';
+  inp.focus();
+}
+function hideCustomModelInput(){
+  const inp=document.getElementById('custom-mdl-in');
+  if(inp) inp.style.display='none';
+}
+function getActiveModel(){
+  const sel=document.getElementById('mdl-sel');
+  if(sel.value==='__custom__'){
+    const inp=document.getElementById('custom-mdl-in');
+    return inp ? inp.value.trim() : '';
+  }
+  return sel.value;
 }
 
 // ===================================================================
 // INIT
 // ===================================================================
 window.addEventListener('DOMContentLoaded',()=>{
+  const savedTheme=ls('sf_theme')||'dark';
+  document.body.setAttribute('data-theme',savedTheme);
+  applyThemeBtn(savedTheme);
   loadModelList();
   const draft=ls('sf_crash_draft');
   if(draft && draft.trim() && draft!==getActiveChapter().text) document.getElementById('restore-bar').classList.remove('hide');
@@ -1096,6 +1163,19 @@ function updWC(){
 }
 function chSize(s){ const p=s+'px'; ed.style.fontSize=p; hl.style.fontSize=p; resize(); }
 function toggleAuto(){ autoOn=!autoOn; document.getElementById('btn-auto').classList.toggle('active',autoOn); }
+function applyThemeBtn(theme){
+  const btn=document.getElementById('thm-btn');
+  btn.innerHTML = theme==='dark'
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>Light'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>Dark';
+}
+function toggleTheme(){
+  const cur=document.body.getAttribute('data-theme')==='dark'?'dark':'light';
+  const next=cur==='dark'?'light':'dark';
+  document.body.setAttribute('data-theme',next);
+  sv('sf_theme',next);
+  applyThemeBtn(next);
+}
 function toggleFocus(){
   document.body.classList.toggle('focus-mode-sf');
   const on = document.body.classList.contains('focus-mode-sf');
@@ -1114,7 +1194,8 @@ function saveKey(){
   if(!v||!v.startsWith('sk-')){ alert('Enter a valid OpenRouter key (starts with sk-)'); return; }
   apiKey=v; sv('sf_or_api_key', v);
   document.getElementById('api-modal').classList.add('hide');
-  setSt('API key saved'); updKeyBtn();
+  setSt('Verifying available models…'); updKeyBtn();
+  loadModelList().then(()=>setSt('Ready'));
 }
 function skipKey(){ document.getElementById('api-modal').classList.add('hide'); }
 function showKeyModal(){ document.getElementById('api-in').value=apiKey||''; document.getElementById('api-modal').classList.remove('hide'); document.getElementById('api-in').focus(); }
@@ -1131,7 +1212,8 @@ async function doCheck(){
   if(!apiKey){ setSt('No API key'); showKeyModal(); return; }
   busy=true; setSt('Checking...',true);
   try{
-    const model=document.getElementById('mdl-sel').value;
+    const model=getActiveModel();
+    if(!model){ setSt('Select or enter a model'); busy=false; document.getElementById('spin').classList.remove('on'); return; }
     const raw=await callOR(text, model);
     errs=parseE(raw, text); dismissed=new Set();
     persistChapterErrs();
