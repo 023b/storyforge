@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StoryForge</title>
+<style>
+  :root{
+    --bg:#000000;--surface:#0a0a0a;--surface2:#141414;--surface3:#1c1c1c;--border:#2a2a2a;--border2:#383838;
+    --text:#f2f2f0;--text2:#a8a8a4;--text3:#686864;
+    --accent:#e8c07d;--accent-dim:#3a3220;--accent-text:#000;
+    --eg:#e74c3c;--eg-bg:rgba(231,76,60,0.15);
+    --es:#3498db;--es-bg:rgba(52,152,219,0.15);
+    --est:#9b59b6;--est-bg:rgba(155,89,182,0.15);
+    --ep:#2ecc71;--ep-bg:rgba(46,204,113,0.15);
+    --ew:#e67e22;--ew-bg:rgba(230,126,34,0.15);
+    --panel:#000000;--shadow:0 4px 20px rgba(0,0,0,0.6);--radius:6px;
+    --char-a:#e8c07d;--char-b:#7dc4e8;--char-c:#e87d9e;--char-d:#8de87d;--char-e:#c47de8;--char-f:#e8a97d;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Iowan Old Style','Palatino Linotype',Georgia,serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+  ::-webkit-scrollbar{width:6px;height:6px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+  /* ===== TOP TOOLBAR ===== */
+  #toolbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 10px;height:46px;display:flex;align-items:center;gap:3px;flex-shrink:0;overflow-x:auto;}
+  .tb-title{font-size:14px;font-weight:700;color:var(--accent);margin-right:8px;white-space:nowrap;flex-shrink:0;letter-spacing:.3px;}
+  .tb-sep{width:1px;height:22px;background:var(--border);margin:0 4px;flex-shrink:0;}
+  .tb-btn{background:none;border:1px solid transparent;border-radius:var(--radius);color:var(--text2);cursor:pointer;font-size:11.5px;padding:5px 8px;display:flex;align-items:center;gap:4px;white-space:nowrap;transition:all .15s;font-family:system-ui,sans-serif;flex-shrink:0;}
+  .tb-btn:hover{background:var(--surface3);border-color:var(--border2);color:var(--text);}
+  .tb-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+  .tb-btn svg{width:13px;height:13px;flex-shrink:0;}
+  .tb-sel{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:11.5px;padding:4px 5px;cursor:pointer;outline:none;flex-shrink:0;font-family:system-ui,sans-serif;}
+  .tb-num{width:40px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:11.5px;padding:4px 5px;text-align:center;outline:none;flex-shrink:0;}
+  #status-area{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  #wc{font-size:10.5px;color:var(--text3);white-space:nowrap;font-family:system-ui,sans-serif;}
+  #chk-status{font-size:10.5px;color:var(--text3);display:flex;align-items:center;gap:5px;white-space:nowrap;font-family:system-ui,sans-serif;}
+  .spinner{width:11px;height:11px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:none;}
+  .spinner.on{display:block;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #save-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);transition:background .3s;flex-shrink:0;}
+  #save-dot.saving{background:#e67e22;}
+  #save-dot.saved{background:#2ecc71;}
+
+  /* ===== VIEW TABS (Write / Notes / Timeline / Characters) ===== */
+  #viewtabs{background:var(--surface);border-bottom:1px solid var(--border);padding:0 10px;height:38px;display:flex;align-items:center;gap:2px;flex-shrink:0;}
+  .vtab{background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:8px 14px;font-family:system-ui,sans-serif;font-weight:600;border-bottom:2px solid transparent;transition:all .15s;display:flex;align-items:center;gap:6px;}
+  .vtab:hover{color:var(--text2);}
+  .vtab.on{color:var(--accent);border-bottom-color:var(--accent);}
+  .vtab svg{width:14px;height:14px;}
+
+  #restore-bar{background:var(--accent-dim);border-bottom:1px solid var(--accent);padding:7px 16px;font-size:12px;font-family:system-ui,sans-serif;color:var(--text);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+  #restore-bar.hide{display:none;}
+  #restore-bar button{font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--accent);background:var(--accent);color:#000;cursor:pointer;font-weight:600;}
+  #restore-bar .dbtn{background:none;color:var(--text2);border-color:var(--border);}
+
+  #main{display:flex;flex:1;overflow:hidden;position:relative;}
+
+  /* ===== CHAPTER SIDEBAR (left) ===== */
+  #chsidebar{width:200px;flex-shrink:0;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;}
+  #chsidebar.collapsed{width:0;border-right:none;}
+  #ch-hdr{padding:10px 12px 8px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  #ch-hdr span{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;font-family:system-ui,sans-serif;}
+  #ch-add{background:none;border:1px solid var(--border2);border-radius:4px;color:var(--text2);cursor:pointer;font-size:14px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;line-height:1;}
+  #ch-add:hover{border-color:var(--accent);color:var(--accent);}
+  #ch-list{overflow-y:auto;flex:1;padding:6px;}
+  .ch-item{padding:8px 10px;border-radius:5px;cursor:pointer;margin-bottom:2px;font-size:12.5px;color:var(--text2);font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:space-between;gap:6px;transition:background .12s;position:relative;}
+  .ch-item:hover{background:var(--surface2);}
+  .ch-item.active{background:var(--accent-dim);color:var(--accent);}
+  .ch-item .chn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+  .ch-item .chdel{opacity:0;font-size:13px;color:var(--text3);flex-shrink:0;}
+  .ch-item:hover .chdel{opacity:1;}
+  .ch-item .chdel:hover{color:var(--eg);}
+  .ch-item .chwc{font-size:9.5px;color:var(--text3);font-family:system-ui,sans-serif;flex-shrink:0;}
+  #notes-tab-btn{margin:6px;padding:9px 10px;border-radius:5px;cursor:pointer;font-size:12.5px;color:var(--text2);font-family:system-ui,sans-serif;border:1px dashed var(--border2);display:flex;align-items:center;gap:7px;transition:all .15s;}
+  #notes-tab-btn:hover{border-color:var(--accent);color:var(--accent);}
+  #notes-tab-btn svg{width:13px;height:13px;flex-shrink:0;}
+
+  /* ===== EDITOR PANE ===== */
+  #epane{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+  #ewrap{flex:1;overflow-y:auto;padding:36px;position:relative;}
+  #einner{max-width:740px;margin:0 auto;position:relative;}
+  #ch-title-input{width:100%;background:transparent;border:none;outline:none;color:var(--text);font-size:26px;font-weight:700;font-family:inherit;margin-bottom:18px;padding:0;}
+  #ch-title-input::placeholder{color:var(--text3);}
+
+  #hlayer{
+    position:absolute;top:0;left:0;right:0;
+    pointer-events:none;
+    white-space:pre-wrap;word-break:break-word;
+    font-family:inherit;font-size:17px;line-height:1.85;
+    color:transparent;overflow:hidden;
+    border:1px solid transparent;padding:2px 0;margin:0;
+    min-height:500px;
+  }
+  #editor{
+    position:relative;z-index:1;display:block;
+    width:100%;min-height:500px;
+    background:transparent;color:var(--text);caret-color:var(--accent);
+    font-family:inherit;font-size:17px;line-height:1.85;
+    border:none;outline:none;resize:none;padding:2px 0;margin:0;
+    overflow:hidden;white-space:pre-wrap;word-break:break-word;
+    letter-spacing:normal;
+  }
+  .hl{border-radius:2px;}
+  .hl-grammar{background:var(--eg-bg);border-bottom:2.5px solid var(--eg);}
+  .hl-spelling{background:var(--es-bg);border-bottom:2.5px solid var(--es);}
+  .hl-style{background:var(--est-bg);border-bottom:2.5px solid var(--est);}
+  .hl-punct{background:var(--ep-bg);border-bottom:2.5px solid var(--ep);}
+  .hl-word-order{background:var(--ew-bg);border-bottom:2.5px solid var(--ew);}
+
+  /* ===== ISSUES SIDEBAR (right) ===== */
+  #sidebar{width:300px;flex-shrink:0;border-left:1px solid var(--border);background:var(--panel);display:flex;flex-direction:column;overflow:hidden;transition:width .2s;}
+  #sidebar.collapsed{width:0;border-left:none;}
+  #sbhdr{padding:11px 14px 9px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  #sbtitle{font-size:12.5px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;font-family:system-ui,sans-serif;text-transform:uppercase;letter-spacing:.4px;}
+  #badge{background:var(--accent);color:#000;border-radius:10px;font-size:10px;padding:1px 6px;font-family:system-ui,sans-serif;font-weight:700;}
+  #fbar{padding:7px 10px;border-bottom:1px solid var(--border);display:flex;gap:4px;flex-wrap:wrap;flex-shrink:0;}
+  .fb{font-size:9.5px;padding:2px 7px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-family:system-ui,sans-serif;transition:all .15s;}
+  .fb.on{color:#000;border-color:transparent;}
+  .fb[data-f="all"].on{background:var(--text2);color:#000;}
+  .fb[data-f="grammar"].on{background:var(--eg);color:#fff;}
+  .fb[data-f="spelling"].on{background:var(--es);color:#fff;}
+  .fb[data-f="style"].on{background:var(--est);color:#fff;}
+  .fb[data-f="punct"].on{background:var(--ep);color:#000;}
+  .fb[data-f="word-order"].on{background:var(--ew);color:#000;}
+  #elist{overflow-y:auto;flex:1;padding:8px;}
+  .ecard{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:border-color .15s;}
+  .ecard:hover{border-color:var(--accent);}
+  .ecard.focused{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim);}
+  .etag{display:inline-block;font-size:9px;font-family:system-ui,sans-serif;font-weight:700;letter-spacing:.5px;text-transform:uppercase;border-radius:3px;padding:1px 5px;margin-bottom:5px;color:#fff;}
+  .tg{background:var(--eg);}.ts{background:var(--es);}.tst{background:var(--est);}.tp{background:var(--ep);color:#000;}.tw{background:var(--ew);color:#000;}
+  .excerpt{font-size:13px;color:var(--text);margin-bottom:4px;font-style:italic;font-family:inherit;word-break:break-word;}
+  .excerpt mark{background:none;color:var(--accent);font-style:normal;font-weight:700;}
+  .expl{font-size:11.5px;color:var(--text2);margin-bottom:7px;line-height:1.5;font-family:system-ui,sans-serif;}
+  .sug{font-size:11.5px;color:var(--text);background:var(--surface3);border-radius:4px;padding:5px 8px;margin-bottom:7px;font-family:system-ui,sans-serif;border-left:2px solid var(--accent);word-break:break-word;}
+  .sug strong{color:var(--accent);}
+  .cactions{display:flex;gap:6px;}
+  .cbtn{font-size:11px;padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-family:system-ui,sans-serif;transition:all .15s;}
+  .cbtn:hover{background:var(--surface3);}
+  .cbtn.acc{border-color:var(--accent);color:var(--accent);}
+  .cbtn.acc:hover{background:var(--accent);color:#000;}
+  .empty{padding:28px 14px;text-align:center;color:var(--text3);font-size:12.5px;font-family:system-ui,sans-serif;line-height:1.6;}
+  .empty .icon{font-size:24px;margin-bottom:8px;opacity:.6;}
+
+  #tip{position:fixed;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius);padding:8px 10px;font-size:12px;font-family:system-ui,sans-serif;color:var(--text);max-width:230px;box-shadow:var(--shadow);z-index:1000;pointer-events:none;opacity:0;transition:opacity .15s;line-height:1.5;}
+  #tip.show{opacity:1;}
+
+  /* ===== MODALS ===== */
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:2000;}
+  .modal-bg.hide{display:none;}
+  .mbox{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:24px 28px;max-width:420px;width:90%;box-shadow:var(--shadow);}
+  .mbox h2{font-size:16px;color:var(--text);margin-bottom:8px;font-family:system-ui,sans-serif;}
+  .mbox p{font-size:13px;color:var(--text2);margin-bottom:14px;font-family:system-ui,sans-serif;line-height:1.5;}
+  .minput{width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:13px;font-family:monospace;padding:9px 11px;outline:none;margin-bottom:12px;}
+  .minput:focus{border-color:var(--accent);}
+  .mrow{display:flex;gap:8px;}
+  .mbtn{flex:1;padding:9px;border-radius:var(--radius);border:none;font-size:13px;font-family:system-ui,sans-serif;cursor:pointer;font-weight:600;}
+  .mbtn.pri{background:var(--accent);color:#000;}
+  .mbtn.sec{background:var(--surface3);color:var(--text2);border:1px solid var(--border);}
+
+  /* ===== NOTES VIEW ===== */
+  #notes-view{display:none;flex:1;overflow:hidden;flex-direction:column;}
+  #notes-view.on{display:flex;}
+  #notes-body{flex:1;overflow-y:auto;padding:36px;}
+  #notes-inner{max-width:820px;margin:0 auto;}
+  #notes-inner h1{font-size:24px;margin-bottom:4px;color:var(--accent);}
+  #notes-hint{font-size:12px;color:var(--text3);font-family:system-ui,sans-serif;margin-bottom:20px;}
+  .notesec{margin-bottom:26px;}
+  .notesec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .notesec-hdr h3{font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;font-family:system-ui,sans-serif;}
+  .notesec textarea{width:100%;min-height:120px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-family:inherit;font-size:15px;line-height:1.7;padding:14px 16px;outline:none;resize:vertical;}
+  .notesec textarea:focus{border-color:var(--border2);}
+  .add-sec-btn{font-size:11px;padding:4px 10px;border-radius:4px;border:1px dashed var(--border2);background:none;color:var(--text3);cursor:pointer;font-family:system-ui,sans-serif;}
+  .add-sec-btn:hover{color:var(--accent);border-color:var(--accent);}
+  .sec-del{font-size:11px;color:var(--text3);cursor:pointer;background:none;border:none;}
+  .sec-del:hover{color:var(--eg);}
+
+  /* ===== TIMELINE VIEW ===== */
+  #timeline-view{display:none;flex:1;overflow:hidden;flex-direction:column;}
+  #timeline-view.on{display:flex;}
+  #tl-toolbar{padding:10px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;background:var(--surface);}
+  #tl-toolbar .tglabel{font-size:11px;color:var(--text3);font-family:system-ui,sans-serif;text-transform:uppercase;letter-spacing:.4px;}
+  #tl-mode-toggle{display:flex;border:1px solid var(--border2);border-radius:6px;overflow:hidden;}
+  #tl-mode-toggle button{background:var(--surface2);border:none;color:var(--text2);font-size:11.5px;padding:6px 12px;cursor:pointer;font-family:system-ui,sans-serif;}
+  #tl-mode-toggle button.on{background:var(--accent-dim);color:var(--accent);}
+  #tl-add-btn{margin-left:auto;background:var(--accent);color:#000;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:system-ui,sans-serif;}
+  #tl-body{flex:1;overflow:auto;padding:30px 40px;}
+  #tl-linear{max-width:900px;margin:0 auto;position:relative;}
+  #tl-linear::before{content:'';position:absolute;left:100px;top:6px;bottom:6px;width:2px;background:var(--border2);}
+  .tl-event{position:relative;padding-left:130px;margin-bottom:22px;min-height:40px;}
+  .tl-date{position:absolute;left:0;top:2px;width:88px;text-align:right;font-size:11px;color:var(--text3);font-family:system-ui,sans-serif;font-weight:600;}
+  .tl-dot{position:absolute;left:96px;top:5px;width:11px;height:11px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);z-index:1;}
+  .tl-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;cursor:pointer;transition:border-color .15s;}
+  .tl-card:hover{border-color:var(--accent);}
+  .tl-card h4{font-size:14px;color:var(--text);margin-bottom:4px;}
+  .tl-card p{font-size:12px;color:var(--text2);line-height:1.5;font-family:system-ui,sans-serif;}
+  .tl-tags{display:flex;gap:5px;margin-top:7px;flex-wrap:wrap;}
+  .tl-chip{font-size:10px;padding:2px 7px;border-radius:8px;background:var(--surface3);color:var(--text2);font-family:system-ui,sans-serif;}
+  #tl-tracks{display:flex;gap:0;min-height:100%;}
+  .tl-track{min-width:260px;border-right:1px solid var(--border);padding:0 16px;flex-shrink:0;}
+  .tl-track-hdr{font-size:12px;font-weight:700;color:var(--text);padding:8px 0 14px;position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--border2);margin-bottom:14px;font-family:system-ui,sans-serif;}
+  .tl-empty{text-align:center;color:var(--text3);font-size:12px;font-family:system-ui,sans-serif;padding:40px 20px;}
+
+  /* ===== CHARACTER GRAPH VIEW ===== */
+  #chars-view{display:none;flex:1;overflow:hidden;position:relative;}
+  #chars-view.on{display:flex;}
+  #graph-toolbar{position:absolute;top:14px;left:14px;z-index:10;display:flex;gap:8px;align-items:center;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:7px 10px;box-shadow:var(--shadow);}
+  #graph-toolbar button{background:var(--surface3);border:1px solid var(--border2);color:var(--text2);border-radius:5px;font-size:11.5px;padding:5px 10px;cursor:pointer;font-family:system-ui,sans-serif;display:flex;align-items:center;gap:5px;}
+  #graph-toolbar button:hover{border-color:var(--accent);color:var(--accent);}
+  #graph-toolbar button.armed{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);}
+  #graph-hint{position:absolute;top:14px;right:14px;z-index:10;background:var(--surface2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--text3);font-family:system-ui,sans-serif;max-width:220px;line-height:1.5;}
+  #graph-svg-wrap{flex:1;overflow:auto;position:relative;background:
+    radial-gradient(circle,rgba(255,255,255,.035) 1px,transparent 1px) 0 0/22px 22px;}
+  #graph-svg{position:absolute;top:0;left:0;}
+  .node-card{position:absolute;width:150px;background:var(--surface2);border:2px solid var(--border2);border-radius:9px;padding:10px 12px;cursor:grab;user-select:none;box-shadow:var(--shadow);transition:border-color .15s;}
+  .node-card:active{cursor:grabbing;}
+  .node-card.connecting-src{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim);}
+  .node-card .nc-name{font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:2px;word-break:break-word;}
+  .node-card .nc-role{font-size:10.5px;color:var(--text3);font-family:system-ui,sans-serif;text-transform:uppercase;letter-spacing:.3px;}
+  .node-card .nc-del{position:absolute;top:4px;right:6px;font-size:12px;color:var(--text3);cursor:pointer;opacity:0;}
+  .node-card:hover .nc-del{opacity:1;}
+  .node-card .nc-del:hover{color:var(--eg);}
+  .node-card .nc-port{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);bottom:-6px;right:-6px;cursor:crosshair;}
+  .edge-label{position:absolute;background:var(--surface3);border:1px solid var(--border2);border-radius:5px;padding:2px 8px;font-size:10.5px;color:var(--text2);font-family:system-ui,sans-serif;cursor:pointer;white-space:nowrap;transform:translate(-50%,-50%);}
+  .edge-label:hover{border-color:var(--accent);color:var(--accent);}
+
+  #char-form-modal .mbox{max-width:380px;}
+  .fld{margin-bottom:10px;}
+  .fld label{display:block;font-size:11px;color:var(--text3);margin-bottom:4px;font-family:system-ui,sans-serif;text-transform:uppercase;letter-spacing:.3px;}
+  .fld input,.fld textarea,.fld select{width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:13px;font-family:system-ui,sans-serif;padding:8px 10px;outline:none;}
+  .fld textarea{resize:vertical;min-height:60px;font-family:inherit;}
+  .fld input:focus,.fld textarea:focus,.fld select:focus{border-color:var(--accent);}
+
+  body.focus-mode-sf #chsidebar{width:0;border-right:none;}
+  body.focus-mode-sf #sidebar{width:0;border-left:none;}
+</style>
+</head>
+<body>
+<!-- API KEY MODAL -->
+<div id="api-modal" class="modal-bg">
+  <div class="mbox">
+    <h2>Connect OpenRouter</h2>
+    <p>Paste your OpenRouter API key. Stored only in your browser's localStorage — never sent anywhere else. Don't have one? <a href="https://openrouter.ai/keys" target="_blank" rel="noopener" style="color:var(--accent);">Get a free key →</a></p>
+    <input id="api-in" class="minput" type="password" placeholder="sk-or-v1-..." />
+    <div class="mrow">
+      <button class="mbtn sec" onclick="skipKey()">Skip for now</button>
+      <button class="mbtn pri" onclick="saveKey()">Save &amp; Start</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div id="exp-modal" class="modal-bg hide">
+  <div class="mbox">
+    <h2>Export</h2>
+    <p id="exp-desc">Exports the current chapter as clean text — no highlight marks.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+      <button class="mbtn pri" onclick="doExport('txt')">Plain Text (.txt)</button>
+      <button class="mbtn sec" onclick="doExport('md')">Markdown (.md)</button>
+      <button class="mbtn sec" onclick="doExport('html')">HTML (.html)</button>
+      <button class="mbtn sec" onclick="doExport('docx')">Word (.docx) — paste method</button>
+      <button class="mbtn sec" onclick="doExport('all')">Entire Story — all chapters (.txt)</button>
+      <button class="mbtn sec" onclick="doExport('json')">Full Project Backup (.json)</button>
+    </div>
+    <button class="mbtn sec" onclick="closeExp()">Cancel</button>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<input type="file" id="import-file-input" accept=".json" style="display:none" onchange="handleImportFile(event)">
+
+<!-- CHARACTER FORM MODAL -->
+<div id="char-form-modal" class="modal-bg hide">
+  <div class="mbox">
+    <h2 id="cf-title">New Character</h2>
+    <div class="fld"><label>Name</label><input id="cf-name" placeholder="e.g. Rei Sato"></div>
+    <div class="fld"><label>Role / Age</label><input id="cf-role" placeholder="e.g. Leader, age 12"></div>
+    <div class="fld"><label>Notes</label><textarea id="cf-notes" placeholder="Personality, motive, secrets..."></textarea></div>
+    <div class="fld"><label>Color tag</label>
+      <select id="cf-color">
+        <option value="char-a">Gold</option><option value="char-b">Blue</option><option value="char-c">Rose</option>
+        <option value="char-d">Green</option><option value="char-e">Violet</option><option value="char-f">Amber</option>
+      </select>
+    </div>
+    <div class="mrow">
+      <button class="mbtn sec" onclick="closeCharForm()">Cancel</button>
+      <button class="mbtn pri" onclick="saveCharForm()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDGE LABEL MODAL -->
+<div id="edge-modal" class="modal-bg hide">
+  <div class="mbox">
+    <h2>Connection</h2>
+    <div class="fld"><label>Relationship</label><input id="edge-label-in" placeholder="e.g. sibling, handler, target, ally"></div>
+    <div class="mrow">
+      <button class="mbtn sec" onclick="deleteEdge()" style="color:var(--eg);border-color:var(--eg);">Delete Link</button>
+      <button class="mbtn pri" onclick="saveEdgeLabel()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- TIMELINE EVENT MODAL -->
+<div id="tl-modal" class="modal-bg hide">
+  <div class="mbox">
+    <h2 id="tl-modal-title">New Event</h2>
+    <div class="fld"><label>Date / Time marker</label><input id="tl-date-in" placeholder="e.g. Year 1, Day 14 or March 3rd"></div>
+    <div class="fld"><label>Title</label><input id="tl-title-in" placeholder="e.g. The archive theft"></div>
+    <div class="fld"><label>Description</label><textarea id="tl-desc-in" placeholder="What happens..."></textarea></div>
+    <div class="fld"><label>Linked characters (comma separated)</label><input id="tl-chars-in" placeholder="e.g. Rei, Kaito"></div>
+    <div class="mrow">
+      <button class="mbtn sec" id="tl-del-btn" onclick="deleteTLEvent()" style="color:var(--eg);border-color:var(--eg);display:none;">Delete</button>
+      <button class="mbtn sec" onclick="closeTLModal()">Cancel</button>
+      <button class="mbtn pri" onclick="saveTLEvent()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="tip"></div>
+
+<!-- RESTORE BANNER -->
+<div id="restore-bar" class="hide">
+  <span>Unsaved work found from your last session.</span>
+  <button onclick="restoreDraft()">Restore</button>
+  <button class="dbtn" onclick="document.getElementById('restore-bar').classList.add('hide')">Dismiss</button>
+</div>
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <span class="tb-title">StoryForge</span>
+  <div class="tb-sep"></div>
+  <button class="tb-btn active" id="btn-auto" onclick="toggleAuto()" title="Toggle real-time checking">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Auto
+  </button>
+  <button class="tb-btn" onclick="doCheck()" title="Check now (Ctrl+Enter)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Check
+  </button>
+  <button class="tb-btn" onclick="clearHL()" title="Remove all highlights">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Clear
+  </button>
+  <div class="tb-sep"></div>
+  <input class="tb-num" id="fsz" type="number" value="17" min="10" max="36" onchange="chSize(this.value)" title="Font size"/>
+  <button class="tb-btn" id="foc-btn" onclick="toggleFocus()" title="Focus mode">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3"/></svg>Focus
+  </button>
+  <div class="tb-sep"></div>
+  <select class="tb-sel" id="mdl-sel" style="max-width:200px;">
+    <option value="">Loading models…</option>
+  </select>
+  <button class="tb-btn" id="key-btn" onclick="showKeyModal()" title="Set API key">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>API Key
+  </button>
+  <button class="tb-btn" onclick="openExport()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export
+  </button>
+  <button class="tb-btn" onclick="document.getElementById('import-file-input').click()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Import
+  </button>
+  <div id="status-area">
+    <span id="save-dot" title="Autosave"></span>
+    <span id="wc">0 words</span>
+    <span id="chk-status"><span class="spinner" id="spin"></span><span id="stxt">Ready</span></span>
+  </div>
+</div>
+
+<!-- VIEW TABS -->
+<div id="viewtabs">
+  <button class="vtab on" id="vt-write" onclick="switchView('write')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"/></svg>Write
+  </button>
+  <button class="vtab" id="vt-notes" onclick="switchView('notes')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>Notes &amp; World
+  </button>
+  <button class="vtab" id="vt-timeline" onclick="switchView('timeline')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Timeline
+  </button>
+  <button class="vtab" id="vt-chars" onclick="switchView('chars')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 014-4h6a4 4 0 014 4v2"/><circle cx="17" cy="7" r="3" opacity=".5"/></svg>Characters
+  </button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- ===== WRITE VIEW ===== -->
+  <div id="write-view" style="display:flex;flex:1;overflow:hidden;">
+    <div id="chsidebar">
+      <div id="ch-hdr"><span>Chapters</span><button id="ch-add" onclick="addChapter()" title="New chapter">+</button></div>
+      <div id="ch-list"></div>
+      <div id="notes-tab-btn" onclick="switchView('notes')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        Notes &amp; Worldbuilding
+      </div>
+    </div>
+    <div id="epane">
+      <div id="ewrap">
+        <div id="einner">
+          <input id="ch-title-input" placeholder="Chapter title..." oninput="onTitleInput()">
+          <div id="hlayer" aria-hidden="true"></div>
+          <textarea id="editor" spellcheck="false"
+            placeholder="Start writing this chapter...&#10;&#10;Ctrl+Z to undo always works. Autosaved every few seconds.&#10;Press Check or wait for auto-check (2s after you stop typing)."></textarea>
+        </div>
+      </div>
+    </div>
+    <div id="sidebar">
+      <div id="sbhdr">
+        <div id="sbtitle">Issues <span id="badge">0</span></div>
+        <button class="tb-btn" onclick="toggleSB()" style="padding:2px 5px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div id="fbar">
+        <button class="fb on" data-f="all" onclick="setF('all')">All</button>
+        <button class="fb" data-f="grammar" onclick="setF('grammar')">Grammar</button>
+        <button class="fb" data-f="spelling" onclick="setF('spelling')">Spelling</button>
+        <button class="fb" data-f="punct" onclick="setF('punct')">Punct</button>
+        <button class="fb" data-f="style" onclick="setF('style')">Style</button>
+        <button class="fb" data-f="word-order" onclick="setF('word-order')">Word Order</button>
+      </div>
+      <div id="elist"><div class="empty"><div class="icon">&#9998;</div>Press <strong>Check</strong> or wait for auto-check.</div></div>
+    </div>
+  </div>
+
+  <!-- ===== NOTES VIEW ===== -->
+  <div id="notes-view">
+    <div id="notes-body">
+      <div id="notes-inner">
+        <h1>Notes &amp; Worldbuilding</h1>
+        <div id="notes-hint">Always available alongside your chapters. Add sections for locations, factions, rules of the world, plot threads, research — anything.</div>
+        <div id="notes-sections"></div>
+        <button class="add-sec-btn" onclick="addNoteSection()">+ Add section</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TIMELINE VIEW ===== -->
+  <div id="timeline-view">
+    <div id="tl-toolbar">
+      <span class="tglabel">View</span>
+      <div id="tl-mode-toggle">
+        <button id="tl-mode-linear" class="on" onclick="setTLMode('linear')">Linear</button>
+        <button id="tl-mode-tracks" onclick="setTLMode('tracks')">By Character</button>
+      </div>
+      <button id="tl-add-btn" onclick="openTLModal()">+ Add Event</button>
+    </div>
+    <div id="tl-body">
+      <div id="tl-linear"></div>
+      <div id="tl-tracks" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- ===== CHARACTERS VIEW ===== -->
+  <div id="chars-view">
+    <div id="graph-toolbar">
+      <button onclick="openCharForm()">+ Add Character</button>
+      <button id="link-mode-btn" onclick="toggleLinkMode()">Link Mode</button>
+    </div>
+    <div id="graph-hint">Drag cards to arrange. Click <strong>Link Mode</strong>, then click two characters in sequence to connect them. Click a connection label to edit or delete it.</div>
+    <div id="graph-svg-wrap">
+      <svg id="graph-svg" width="3000" height="2000"></svg>
+      <div id="graph-nodes"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===================================================================
+// STORYFORGE — state, persistence, and all view logic
+// ===================================================================
+
+// ----- STORAGE HELPERS -----
+function ls(k){try{return localStorage.getItem(k)||'';}catch(e){return '';}}
+function sv(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+function lsJSON(k,fallback){try{const v=localStorage.getItem(k);return v?JSON.parse(v):fallback;}catch(e){return fallback;}}
+function svJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+function uid(){return 'id'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ----- GLOBAL STATE -----
+let apiKey=''; try{apiKey=localStorage.getItem('sf_or_api_key')||'';}catch(e){}
+
+let chapters = lsJSON('sf_chapters', null);
+if(!chapters || !Array.isArray(chapters) || chapters.length===0){
+  chapters = [{id:uid(), title:'Chapter 1', text:'', errs:[], dismissed:[]}];
+}
+let activeChapterId = ls('sf_active_chapter') || chapters[0].id;
+if(!chapters.find(c=>c.id===activeChapterId)) activeChapterId = chapters[0].id;
+
+let notes = lsJSON('sf_notes', null);
+if(!notes || !Array.isArray(notes)){
+  notes = [
+    {id:uid(), title:'World & Setting', body:''},
+    {id:uid(), title:'Factions & Groups', body:''},
+    {id:uid(), title:'Plot Threads', body:''},
+    {id:uid(), title:'Research', body:''}
+  ];
+}
+
+let tlEvents = lsJSON('sf_timeline', []);
+let characters = lsJSON('sf_characters', []);
+let edges = lsJSON('sf_edges', []);
+
+let filter='all', autoOn=true, timer=null, busy=false, sbOpen=true, lastSaved='';
+let currentView='write';
+let tlMode='linear';
+let editingTLId=null;
+let editingCharId=null;
+let editingEdgeId=null;
+let linkModeOn=false;
+let linkSrcId=null;
+let dragNode=null, dragOffX=0, dragOffY=0;
+
+const ed=document.getElementById('editor');
+const hl=document.getElementById('hlayer');
+const tip=document.getElementById('tip');
+const chTitleInput=document.getElementById('ch-title-input');
+
+// ===================================================================
+// MODEL LIST — fetched live from OpenRouter so it never goes stale
+// ===================================================================
+const FALLBACK_MODELS=[
+  {id:'meta-llama/llama-3.3-70b-instruct:free',name:'Llama 3.3 70B (free)'},
+  {id:'google/gemini-2.0-flash-exp:free',name:'Gemini 2.0 Flash (free)'},
+  {id:'deepseek/deepseek-chat:free',name:'DeepSeek Chat (free)'},
+  {id:'google/gemini-2.5-flash',name:'Gemini 2.5 Flash'},
+  {id:'openai/gpt-4o-mini',name:'GPT-4o Mini'}
+];
+async function loadModelList(){
+  const sel=document.getElementById('mdl-sel');
+  const savedModel=ls('sf_model')||'';
+  let models=[];
+  try{
+    const r=await fetch('https://openrouter.ai/api/v1/models');
+    if(!r.ok) throw new Error('bad status');
+    const data=await r.json();
+    const all=(data.data||[]);
+    // Free-tier models (id ends :free, or both prompt+completion pricing are 0)
+    const free=all.filter(m=>{
+      const p=m.pricing||{};
+      return m.id.endsWith(':free') || (parseFloat(p.prompt||'1')===0 && parseFloat(p.completion||'1')===0);
+    }).map(m=>({id:m.id,name:m.name+' (free)'}));
+    // A few cheap, well-known paid models as extra options (top of the non-free list by name match)
+    const wantPaid=['openai/gpt-4o-mini','google/gemini-2.5-flash','anthropic/claude-3.5-haiku'];
+    const paid=all.filter(m=>wantPaid.includes(m.id)).map(m=>({id:m.id,name:m.name}));
+    models=[...free.slice(0,15), ...paid];
+    if(!models.length) throw new Error('empty');
+  }catch(e){
+    models=FALLBACK_MODELS;
+  }
+  sel.innerHTML='';
+  models.forEach(m=>{
+    const o=document.createElement('option');
+    o.value=m.id; o.textContent=m.name;
+    sel.appendChild(o);
+  });
+  if(savedModel && models.some(m=>m.id===savedModel)) sel.value=savedModel;
+  sel.addEventListener('change',()=>sv('sf_model',sel.value));
+}
+
+// ===================================================================
+// INIT
+// ===================================================================
+window.addEventListener('DOMContentLoaded',()=>{
+  loadModelList();
+  const draft=ls('sf_crash_draft');
+  if(draft && draft.trim() && draft!==getActiveChapter().text) document.getElementById('restore-bar').classList.remove('hide');
+  if(!apiKey) document.getElementById('api-modal').classList.remove('hide');
+  else{ setSt('Ready'); updKeyBtn(); }
+
+  ed.addEventListener('input', onInput);
+  ed.addEventListener('keydown', onKD);
+  ed.addEventListener('scroll', ()=>{ hl.style.marginTop=(-ed.scrollTop)+'px'; });
+  ed.addEventListener('click', onClick);
+  ed.addEventListener('mousemove', onMM);
+  ed.addEventListener('mouseleave', ()=>tip.classList.remove('show'));
+
+  loadChapterIntoEditor();
+  renderChapterList();
+  renderNotes();
+  renderTimeline();
+  renderGraph();
+  resize(); updWC(); startAS();
+
+  window.addEventListener('mousemove', onGraphDrag);
+  window.addEventListener('mouseup', endGraphDrag);
+});
+
+function startAS(){
+  setInterval(()=>{
+    const t=ed.value;
+    if(t!==lastSaved){
+      persistActiveChapterText();
+      sv('sf_crash_draft', t);
+      lastSaved=t;
+      flashDot();
+    }
+  },3000);
+}
+function flashDot(){
+  const d=document.getElementById('save-dot');
+  d.classList.add('saving');
+  setTimeout(()=>{d.classList.remove('saving');d.classList.add('saved');},600);
+  setTimeout(()=>d.classList.remove('saved'),2500);
+}
+function restoreDraft(){
+  const s=ls('sf_crash_draft');
+  if(s){ ed.value=s; resize(); updWC(); rebuildHL(); document.getElementById('restore-bar').classList.add('hide'); setSt('Draft restored'); }
+}
+window.addEventListener('beforeunload', ()=>{ persistActiveChapterText(); if(ed.value.trim()) sv('sf_crash_draft', ed.value); });
+window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden'){ persistActiveChapterText(); if(ed.value.trim()) sv('sf_crash_draft', ed.value); } });
+
+// ===================================================================
+// VIEW SWITCHING
+// ===================================================================
+function switchView(v){
+  currentView=v;
+  document.getElementById('write-view').style.display = v==='write' ? 'flex' : 'none';
+  document.getElementById('notes-view').classList.toggle('on', v==='notes');
+  document.getElementById('timeline-view').classList.toggle('on', v==='timeline');
+  document.getElementById('chars-view').classList.toggle('on', v==='chars');
+  ['write','notes','timeline','chars'].forEach(x=>{
+    document.getElementById('vt-'+x).classList.toggle('on', x===v);
+  });
+  if(v==='timeline') renderTimeline();
+  if(v==='chars') renderGraph();
+}
+
+// ===================================================================
+// CHAPTERS
+// ===================================================================
+function getActiveChapter(){ return chapters.find(c=>c.id===activeChapterId) || chapters[0]; }
+
+function persistChapters(){ svJSON('sf_chapters', chapters); }
+
+function persistActiveChapterText(){
+  const c=getActiveChapter();
+  if(!c) return;
+  c.text = ed.value;
+  c.title = chTitleInput.value || 'Untitled';
+  persistChapters();
+}
+
+function loadChapterIntoEditor(){
+  const c=getActiveChapter();
+  chTitleInput.value = c.title || '';
+  ed.value = c.text || '';
+  errs = (c.errs||[]).slice();
+  dismissed = new Set(c.dismissed||[]);
+  lastSaved = ed.value;
+  rebuildHL(); renderSB(); resize(); updWC();
+}
+
+function renderChapterList(){
+  const box=document.getElementById('ch-list');
+  box.innerHTML='';
+  chapters.forEach(c=>{
+    const w = c.text && c.text.trim() ? c.text.trim().split(/\s+/).length : 0;
+    const item=document.createElement('div');
+    item.className='ch-item'+(c.id===activeChapterId?' active':'');
+    item.innerHTML=`<span class="chn">${esc(c.title||'Untitled')}</span><span class="chwc">${w}w</span><span class="chdel" title="Delete chapter" onclick="delChapter(event,'${c.id}')">&times;</span>`;
+    item.addEventListener('click',(e)=>{ if(e.target.classList.contains('chdel')) return; selectChapter(c.id); });
+    box.appendChild(item);
+  });
+}
+
+function selectChapter(id){
+  if(id===activeChapterId) return;
+  persistActiveChapterText();
+  const c0 = getActiveChapter();
+  if(c0){ c0.errs = errs; c0.dismissed = Array.from(dismissed); persistChapters(); }
+  activeChapterId = id;
+  sv('sf_active_chapter', id);
+  loadChapterIntoEditor();
+  renderChapterList();
+}
+
+function addChapter(){
+  const n={id:uid(), title:'Chapter '+(chapters.length+1), text:'', errs:[], dismissed:[]};
+  chapters.push(n);
+  persistChapters();
+  selectChapter(n.id);
+}
+
+function delChapter(ev, id){
+  ev.stopPropagation();
+  if(chapters.length<=1){ alert('At least one chapter is required.'); return; }
+  if(!confirm('Delete this chapter? This cannot be undone.')) return;
+  chapters = chapters.filter(c=>c.id!==id);
+  persistChapters();
+  if(activeChapterId===id){
+    activeChapterId = chapters[0].id;
+    sv('sf_active_chapter', activeChapterId);
+    loadChapterIntoEditor();
+  }
+  renderChapterList();
+}
+
+function onTitleInput(){
+  const c=getActiveChapter();
+  if(c){ c.title = chTitleInput.value; persistChapters(); renderChapterList(); }
+}
+
+// ===================================================================
+// NOTES & WORLDBUILDING
+// ===================================================================
+function persistNotes(){ svJSON('sf_notes', notes); }
+
+function renderNotes(){
+  const box=document.getElementById('notes-sections');
+  box.innerHTML='';
+  notes.forEach(n=>{
+    const sec=document.createElement('div');
+    sec.className='notesec';
+    sec.innerHTML=`
+      <div class="notesec-hdr">
+        <input value="${esc(n.title)}" style="background:transparent;border:none;outline:none;color:var(--text2);font-size:13px;text-transform:uppercase;letter-spacing:.5px;font-family:system-ui,sans-serif;font-weight:700;width:60%;" data-role="title" data-id="${n.id}">
+        <button class="sec-del" data-id="${n.id}" data-role="delsec">Remove</button>
+      </div>
+      <textarea data-id="${n.id}" data-role="body" placeholder="Write here...">${esc(n.body)}</textarea>
+    `;
+    box.appendChild(sec);
+  });
+  box.querySelectorAll('[data-role="title"]').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      const n=notes.find(x=>x.id===inp.dataset.id); if(n){ n.title=inp.value; persistNotes(); }
+    });
+  });
+  box.querySelectorAll('[data-role="body"]').forEach(ta=>{
+    ta.addEventListener('input',()=>{
+      const n=notes.find(x=>x.id===ta.dataset.id); if(n){ n.body=ta.value; persistNotes(); }
+    });
+  });
+  box.querySelectorAll('[data-role="delsec"]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      if(!confirm('Remove this section?')) return;
+      notes = notes.filter(n=>n.id!==btn.dataset.id);
+      persistNotes(); renderNotes();
+    });
+  });
+}
+
+function addNoteSection(){
+  notes.push({id:uid(), title:'New Section', body:''});
+  persistNotes();
+  renderNotes();
+}
+
+// ===================================================================
+// TIMELINE
+// ===================================================================
+function persistTL(){ svJSON('sf_timeline', tlEvents); }
+
+function setTLMode(m){
+  tlMode=m;
+  document.getElementById('tl-mode-linear').classList.toggle('on', m==='linear');
+  document.getElementById('tl-mode-tracks').classList.toggle('on', m==='tracks');
+  document.getElementById('tl-linear').style.display = m==='linear' ? 'block' : 'none';
+  document.getElementById('tl-tracks').style.display = m==='tracks' ? 'flex' : 'none';
+  renderTimeline();
+}
+
+function renderTimeline(){
+  if(tlMode==='linear') renderTLLinear(); else renderTLTracks();
+}
+
+function renderTLLinear(){
+  const box=document.getElementById('tl-linear');
+  if(tlEvents.length===0){ box.innerHTML='<div class="tl-empty">No events yet. Click "+ Add Event" to build your timeline.</div>'; return; }
+  const sorted = tlEvents.slice().sort((a,b)=> (a.order||0)-(b.order||0));
+  box.innerHTML='';
+  sorted.forEach(e=>{
+    const div=document.createElement('div');
+    div.className='tl-event';
+    const chips = (e.chars||[]).map(c=>`<span class="tl-chip">${esc(c)}</span>`).join('');
+    div.innerHTML=`
+      <div class="tl-date">${esc(e.date||'')}</div>
+      <div class="tl-dot"></div>
+      <div class="tl-card">
+        <h4>${esc(e.title||'Untitled event')}</h4>
+        <p>${esc(e.desc||'')}</p>
+        <div class="tl-tags">${chips}</div>
+      </div>`;
+    div.querySelector('.tl-card').addEventListener('click',()=>openTLModal(e.id));
+    box.appendChild(div);
+  });
+}
+
+function renderTLTracks(){
+  const box=document.getElementById('tl-tracks');
+  const names = characters.length ? characters.map(c=>c.name) : [];
+  // gather any char names mentioned in events too, in case no character card exists
+  const extra = new Set();
+  tlEvents.forEach(e=>(e.chars||[]).forEach(n=>{ if(!names.includes(n)) extra.add(n); }));
+  const allTracks = names.concat(Array.from(extra));
+  if(allTracks.length===0 && tlEvents.length===0){
+    box.innerHTML='<div class="tl-empty">Add characters or tag events with character names to see per-character tracks.</div>';
+    return;
+  }
+  const unassigned = tlEvents.filter(e=>!(e.chars&&e.chars.length));
+  box.innerHTML='';
+  const sortEv = (arr)=>arr.slice().sort((a,b)=>(a.order||0)-(b.order||0));
+  allTracks.forEach(name=>{
+    const track=document.createElement('div');
+    track.className='tl-track';
+    const evs = sortEv(tlEvents.filter(e=> (e.chars||[]).includes(name) ));
+    track.innerHTML = `<div class="tl-track-hdr">${esc(name)}</div>` +
+      (evs.length ? evs.map(e=>`
+        <div class="tl-card" style="margin-bottom:14px;" data-id="${e.id}">
+          <div class="tl-date" style="position:static;text-align:left;width:auto;margin-bottom:4px;">${esc(e.date||'')}</div>
+          <h4>${esc(e.title||'Untitled')}</h4>
+          <p>${esc(e.desc||'')}</p>
+        </div>`).join('')
+      : '<div class="tl-empty" style="padding:14px 0;">No events</div>');
+    track.querySelectorAll('.tl-card').forEach(card=>{
+      card.addEventListener('click',()=>openTLModal(card.dataset.id));
+    });
+    box.appendChild(track);
+  });
+  if(unassigned.length){
+    const track=document.createElement('div');
+    track.className='tl-track';
+    track.innerHTML = `<div class="tl-track-hdr">Unassigned</div>` + sortEv(unassigned).map(e=>`
+        <div class="tl-card" style="margin-bottom:14px;" data-id="${e.id}">
+          <div class="tl-date" style="position:static;text-align:left;width:auto;margin-bottom:4px;">${esc(e.date||'')}</div>
+          <h4>${esc(e.title||'Untitled')}</h4>
+          <p>${esc(e.desc||'')}</p>
+        </div>`).join('');
+    track.querySelectorAll('.tl-card').forEach(card=>{
+      card.addEventListener('click',()=>openTLModal(card.dataset.id));
+    });
+    box.appendChild(track);
+  }
+}
+
+function openTLModal(id){
+  editingTLId = id || null;
+  const modal=document.getElementById('tl-modal');
+  document.getElementById('tl-modal-title').textContent = id ? 'Edit Event' : 'New Event';
+  document.getElementById('tl-del-btn').style.display = id ? 'block' : 'none';
+  if(id){
+    const e=tlEvents.find(x=>x.id===id);
+    document.getElementById('tl-date-in').value = e.date||'';
+    document.getElementById('tl-title-in').value = e.title||'';
+    document.getElementById('tl-desc-in').value = e.desc||'';
+    document.getElementById('tl-chars-in').value = (e.chars||[]).join(', ');
+  } else {
+    document.getElementById('tl-date-in').value='';
+    document.getElementById('tl-title-in').value='';
+    document.getElementById('tl-desc-in').value='';
+    document.getElementById('tl-chars-in').value='';
+  }
+  modal.classList.remove('hide');
+}
+function closeTLModal(){ document.getElementById('tl-modal').classList.add('hide'); editingTLId=null; }
+function saveTLEvent(){
+  const date=document.getElementById('tl-date-in').value.trim();
+  const title=document.getElementById('tl-title-in').value.trim();
+  const desc=document.getElementById('tl-desc-in').value.trim();
+  const chars=document.getElementById('tl-chars-in').value.split(',').map(s=>s.trim()).filter(Boolean);
+  if(!title){ alert('Give the event a title.'); return; }
+  if(editingTLId){
+    const e=tlEvents.find(x=>x.id===editingTLId);
+    Object.assign(e,{date,title,desc,chars});
+  } else {
+    tlEvents.push({id:uid(), date, title, desc, chars, order:tlEvents.length});
+  }
+  persistTL();
+  closeTLModal();
+  renderTimeline();
+}
+function deleteTLEvent(){
+  if(!editingTLId) return;
+  if(!confirm('Delete this event?')) return;
+  tlEvents = tlEvents.filter(x=>x.id!==editingTLId);
+  persistTL();
+  closeTLModal();
+  renderTimeline();
+}
+
+// ===================================================================
+// CHARACTER GRAPH
+// ===================================================================
+function persistChars(){ svJSON('sf_characters', characters); }
+function persistEdges(){ svJSON('sf_edges', edges); }
+
+function openCharForm(id){
+  editingCharId = id || null;
+  document.getElementById('cf-title').textContent = id ? 'Edit Character' : 'New Character';
+  if(id){
+    const c=characters.find(x=>x.id===id);
+    document.getElementById('cf-name').value=c.name||'';
+    document.getElementById('cf-role').value=c.role||'';
+    document.getElementById('cf-notes').value=c.notes||'';
+    document.getElementById('cf-color').value=c.color||'char-a';
+  } else {
+    document.getElementById('cf-name').value='';
+    document.getElementById('cf-role').value='';
+    document.getElementById('cf-notes').value='';
+    document.getElementById('cf-color').value='char-a';
+  }
+  document.getElementById('char-form-modal').classList.remove('hide');
+}
+function closeCharForm(){ document.getElementById('char-form-modal').classList.add('hide'); editingCharId=null; }
+function saveCharForm(){
+  const name=document.getElementById('cf-name').value.trim();
+  const role=document.getElementById('cf-role').value.trim();
+  const notesV=document.getElementById('cf-notes').value.trim();
+  const color=document.getElementById('cf-color').value;
+  if(!name){ alert('Give the character a name.'); return; }
+  if(editingCharId){
+    const c=characters.find(x=>x.id===editingCharId);
+    Object.assign(c,{name,role,notes:notesV,color});
+  } else {
+    const idx=characters.length;
+    const col = idx % 6;
+    characters.push({
+      id:uid(), name, role, notes:notesV, color,
+      x: 60 + (idx%4)*200, y: 60 + Math.floor(idx/4)*140
+    });
+  }
+  persistChars();
+  closeCharForm();
+  renderGraph();
+}
+function deleteCharacter(id){
+  if(!confirm('Delete this character and all their connections?')) return;
+  characters = characters.filter(c=>c.id!==id);
+  edges = edges.filter(e=>e.from!==id && e.to!==id);
+  persistChars(); persistEdges();
+  renderGraph();
+}
+
+function toggleLinkMode(){
+  linkModeOn=!linkModeOn;
+  linkSrcId=null;
+  document.getElementById('link-mode-btn').classList.toggle('armed', linkModeOn);
+  renderGraph();
+}
+
+function nodeClicked(id){
+  if(!linkModeOn){ return; }
+  if(!linkSrcId){
+    linkSrcId=id;
+    renderGraph();
+    return;
+  }
+  if(linkSrcId===id){ linkSrcId=null; renderGraph(); return; }
+  // create edge
+  const exists = edges.find(e=>(e.from===linkSrcId&&e.to===id)||(e.from===id&&e.to===linkSrcId));
+  if(exists){
+    editingEdgeId = exists.id;
+    document.getElementById('edge-label-in').value = exists.label||'';
+    document.getElementById('edge-modal').classList.remove('hide');
+  } else {
+    const ne={id:uid(), from:linkSrcId, to:id, label:''};
+    edges.push(ne);
+    persistEdges();
+    editingEdgeId = ne.id;
+    document.getElementById('edge-label-in').value='';
+    document.getElementById('edge-modal').classList.remove('hide');
+  }
+  linkSrcId=null;
+  renderGraph();
+}
+
+function editEdge(id){
+  editingEdgeId=id;
+  const e=edges.find(x=>x.id===id);
+  document.getElementById('edge-label-in').value = e.label||'';
+  document.getElementById('edge-modal').classList.remove('hide');
+}
+function saveEdgeLabel(){
+  const e=edges.find(x=>x.id===editingEdgeId);
+  if(e){ e.label=document.getElementById('edge-label-in').value.trim(); persistEdges(); }
+  document.getElementById('edge-modal').classList.add('hide');
+  editingEdgeId=null;
+  renderGraph();
+}
+function deleteEdge(){
+  edges = edges.filter(x=>x.id!==editingEdgeId);
+  persistEdges();
+  document.getElementById('edge-modal').classList.add('hide');
+  editingEdgeId=null;
+  renderGraph();
+}
+
+function renderGraph(){
+  const nodesBox=document.getElementById('graph-nodes');
+  const svg=document.getElementById('graph-svg');
+  nodesBox.innerHTML='';
+  svg.innerHTML='';
+
+  if(characters.length===0){
+    nodesBox.innerHTML='<div class="tl-empty" style="position:absolute;top:80px;left:30px;">No characters yet. Click "+ Add Character" to start mapping your cast.</div>';
+    return;
+  }
+
+  characters.forEach(c=>{
+    const card=document.createElement('div');
+    card.className='node-card'+(linkSrcId===c.id?' connecting-src':'');
+    card.style.left=(c.x||60)+'px';
+    card.style.top=(c.y||60)+'px';
+    card.style.borderColor = 'var(--'+(c.color||'char-a')+')';
+    card.dataset.id=c.id;
+    card.innerHTML = `
+      <span class="nc-del" onclick="event.stopPropagation();deleteCharacter('${c.id}')">&times;</span>
+      <div class="nc-name" style="color:var(--${c.color||'char-a'})">${esc(c.name)}</div>
+      <div class="nc-role">${esc(c.role||'')}</div>
+      <div class="nc-port" title="Drag not required — use Link Mode"></div>
+    `;
+    card.addEventListener('mousedown',(e)=>{
+      if(e.target.classList.contains('nc-del')||e.target.classList.contains('nc-port')) return;
+      if(linkModeOn) return;
+      startGraphDrag(e, c.id);
+    });
+    card.addEventListener('click',(e)=>{
+      if(e.target.classList.contains('nc-del')) return;
+      if(linkModeOn){ nodeClicked(c.id); }
+      else if(!dragNode){ openCharForm(c.id); }
+    });
+    card.addEventListener('dblclick',(e)=>{ e.stopPropagation(); openCharForm(c.id); });
+    nodesBox.appendChild(card);
+  });
+
+  // Draw edges as SVG lines + label divs
+  edges.forEach(e=>{
+    const a=characters.find(c=>c.id===e.from);
+    const b=characters.find(c=>c.id===e.to);
+    if(!a||!b) return;
+    const ax=(a.x||0)+75, ay=(a.y||0)+30;
+    const bx=(b.x||0)+75, by=(b.y||0)+30;
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',ax); line.setAttribute('y1',ay);
+    line.setAttribute('x2',bx); line.setAttribute('y2',by);
+    line.setAttribute('stroke','var(--border2)');
+    line.setAttribute('stroke-width','2');
+    svg.appendChild(line);
+
+    const mx=(ax+bx)/2, my=(ay+by)/2;
+    const lbl=document.createElement('div');
+    lbl.className='edge-label';
+    lbl.style.left=mx+'px'; lbl.style.top=my+'px';
+    lbl.textContent = e.label ? e.label : '+ label';
+    lbl.addEventListener('click',(ev)=>{ ev.stopPropagation(); editEdge(e.id); });
+    nodesBox.appendChild(lbl);
+  });
+}
+
+function startGraphDrag(ev, id){
+  dragNode=id;
+  const c=characters.find(x=>x.id===id);
+  const wrap=document.getElementById('graph-svg-wrap');
+  dragOffX = ev.clientX + wrap.scrollLeft - (c.x||0);
+  dragOffY = ev.clientY + wrap.scrollTop - (c.y||0);
+}
+function onGraphDrag(ev){
+  if(!dragNode) return;
+  const c=characters.find(x=>x.id===dragNode);
+  if(!c) return;
+  const wrap=document.getElementById('graph-svg-wrap');
+  c.x = Math.max(0, ev.clientX + wrap.scrollLeft - dragOffX);
+  c.y = Math.max(0, ev.clientY + wrap.scrollTop - dragOffY);
+  renderGraph();
+}
+function endGraphDrag(){
+  if(dragNode){ persistChars(); }
+  dragNode=null;
+}
+
+// ===================================================================
+// EDITOR (word count, resize, font, focus mode)
+// ===================================================================
+function onInput(){
+  updWC(); resize(); rebuildHL();
+  if(autoOn){ clearTimeout(timer); timer=setTimeout(doCheck,2000); }
+}
+function onKD(e){
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){ e.preventDefault(); doCheck(); }
+  if(e.key==='Tab'){
+    e.preventDefault();
+    const s=ed.selectionStart, en=ed.selectionEnd;
+    ed.value=ed.value.slice(0,s)+'    '+ed.value.slice(en);
+    ed.selectionStart=ed.selectionEnd=s+4;
+    resize();
+  }
+}
+function resize(){
+  ed.style.height='auto';
+  ed.style.height=Math.max(ed.scrollHeight,500)+'px';
+  hl.style.height=ed.style.height;
+}
+function updWC(){
+  const t=ed.value, w=t.trim()?t.trim().split(/\s+/).length:0;
+  document.getElementById('wc').textContent=w+' words · '+t.length+' chars';
+}
+function chSize(s){ const p=s+'px'; ed.style.fontSize=p; hl.style.fontSize=p; resize(); }
+function toggleAuto(){ autoOn=!autoOn; document.getElementById('btn-auto').classList.toggle('active',autoOn); }
+function toggleFocus(){
+  document.body.classList.toggle('focus-mode-sf');
+  const on = document.body.classList.contains('focus-mode-sf');
+  document.getElementById('foc-btn').classList.toggle('active', on);
+  document.getElementById('chsidebar').classList.toggle('collapsed', on);
+  document.getElementById('sidebar').classList.toggle('collapsed', on);
+  document.getElementById('viewtabs').style.display = on ? 'none' : 'flex';
+}
+function toggleSB(){ sbOpen=!sbOpen; document.getElementById('sidebar').classList.toggle('collapsed',!sbOpen); }
+
+// ===================================================================
+// API KEY
+// ===================================================================
+function saveKey(){
+  const v=document.getElementById('api-in').value.trim();
+  if(!v||!v.startsWith('sk-')){ alert('Enter a valid OpenRouter key (starts with sk-)'); return; }
+  apiKey=v; sv('sf_or_api_key', v);
+  document.getElementById('api-modal').classList.add('hide');
+  setSt('API key saved'); updKeyBtn();
+}
+function skipKey(){ document.getElementById('api-modal').classList.add('hide'); }
+function showKeyModal(){ document.getElementById('api-in').value=apiKey||''; document.getElementById('api-modal').classList.remove('hide'); document.getElementById('api-in').focus(); }
+function updKeyBtn(){ const b=document.getElementById('key-btn'); if(apiKey){ b.style.color='var(--accent)'; b.title='Key set — click to change'; } else b.style.color=''; }
+
+// ===================================================================
+// GRAMMAR CHECK — same mechanism as original proofreader (unchanged)
+// ===================================================================
+let errs=[], dismissed=new Set();
+
+async function doCheck(){
+  const text=ed.value.trim();
+  if(!text||busy) return;
+  if(!apiKey){ setSt('No API key'); showKeyModal(); return; }
+  busy=true; setSt('Checking...',true);
+  try{
+    const model=document.getElementById('mdl-sel').value;
+    const raw=await callOR(text, model);
+    errs=parseE(raw, text); dismissed=new Set();
+    persistChapterErrs();
+    rebuildHL(); renderSB();
+    setSt(errs.length+' issue'+(errs.length!==1?'s':'')+' found');
+  }catch(e){
+    setSt(String(e.message||e).slice(0,70));
+    console.error(e);
+  }finally{ busy=false; document.getElementById('spin').classList.remove('on'); }
+}
+
+function persistChapterErrs(){
+  const c=getActiveChapter();
+  if(c){ c.errs=errs; c.dismissed=Array.from(dismissed); persistChapters(); }
+}
+
+async function callOR(text, model){
+  const sys=`You are a precise proofreader — NOT a rewriter. Find grammar, spelling, punctuation, tense, agreement, word order, sentence formation errors only.
+RULES:
+- Do NOT flag creative style, deliberate fragments, or authorial voice.
+- Do NOT flag intentional violence, dark themes, or mature subject matter in the story content — you are a grammar/spelling checker only, not a content reviewer.
+- wrong_part must be EXACT short verbatim substring from source (a word or short phrase, not a whole sentence).
+- Suggest only the minimal fix.
+- If no errors, return [].
+Return ONLY a JSON array, no markdown, no preamble:
+[{"type":"grammar","wrong_part":"she don't","explanation":"Subject-verb: 'she' needs 'doesn't'.","suggestion":"she doesn't"}]
+Types: grammar, spelling, punct, style, word-order`;
+  const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey,'HTTP-Referer':'https://storyforge.app','X-Title':'StoryForge'},
+    body:JSON.stringify({model, messages:[{role:'system',content:sys},{role:'user',content:'Proofread:\n\n'+text}], temperature:0.1, max_tokens:3000})
+  });
+  if(!r.ok){ const b=await r.text(); let m='API '+r.status; try{ m=JSON.parse(b)?.error?.message||m; }catch(e){} throw new Error(m); }
+  const d=await r.json();
+  return d.choices?.[0]?.message?.content || '[]';
+}
+
+function parseE(raw, fullText){
+  try{
+    let s=raw.trim().replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/\s*```$/i,'');
+    const arr=JSON.parse(s);
+    if(!Array.isArray(arr)) return [];
+    return arr.map((e,i)=>({id:i, type:e.type||'grammar', wp:(e.wrong_part||'').trim(), ex:e.explanation||'', sg:e.suggestion||''}))
+      .filter(e=>e.wp && fullText.includes(e.wp));
+  }catch(e){ console.warn('parse:',e,raw); return []; }
+}
+
+// ===== HIGHLIGHT LAYER =====
+function rebuildHL(){
+  const text=ed.value;
+  const active=errs.filter(e=>!dismissed.has(e.id));
+  if(active.length===0){ hl.innerHTML=esc(text); return; }
+  const marks=[];
+  active.forEach(e=>{ let i=0; while(true){ const p=text.indexOf(e.wp,i); if(p===-1) break; marks.push({s:p,en:p+e.wp.length,e}); i=p+1; } });
+  marks.sort((a,b)=>a.s-b.s);
+  const clean=[]; let last=0;
+  marks.forEach(m=>{ if(m.s>=last){ clean.push(m); last=m.en; } });
+  let html='', cur=0;
+  clean.forEach(m=>{
+    if(m.s>cur) html+=esc(text.slice(cur,m.s));
+    html+=`<span class="hl hl-${m.e.type}" data-eid="${m.e.id}">${esc(text.slice(m.s,m.en))}</span>`;
+    cur=m.en;
+  });
+  if(cur<text.length) html+=esc(text.slice(cur));
+  hl.innerHTML=html;
+}
+function clearHL(){ errs=[]; dismissed=new Set(); persistChapterErrs(); hl.innerHTML=esc(ed.value); renderSB(); setSt('Highlights cleared'); }
+
+// ===== CLICK/HOVER ON TEXTAREA =====
+function getErrAtPos(pos){
+  const text=ed.value;
+  return errs.filter(e=>!dismissed.has(e.id)).find(e=>{
+    let i=0; while(true){ const p=text.indexOf(e.wp,i); if(p===-1) return false; if(pos>=p&&pos<=p+e.wp.length) return true; i=p+1; }
+  })||null;
+}
+function onClick(){ setTimeout(()=>{ const e=getErrAtPos(ed.selectionStart); if(e){ hlCard(e.id); if(!sbOpen) toggleSB(); } },10); }
+function onMM(ev){
+  setTimeout(()=>{
+    const e=getErrAtPos(ed.selectionStart);
+    if(e){
+      tip.innerHTML='<strong>'+esc(e.ex)+'</strong><br><em>Suggestion: '+esc(e.sg)+'</em>';
+      tip.style.left=Math.min(ev.clientX+12, window.innerWidth-245)+'px';
+      tip.style.top=Math.max(ev.clientY-65, 8)+'px';
+      tip.classList.add('show');
+    } else tip.classList.remove('show');
+  },5);
+}
+
+// ===== SIDEBAR =====
+function renderSB(){
+  const list=document.getElementById('elist');
+  const active=errs.filter(e=>!dismissed.has(e.id));
+  document.getElementById('badge').textContent=active.length;
+  const vis=active.filter(e=>filter==='all'||e.type===filter);
+  if(vis.length===0){
+    list.innerHTML = errs.length===0
+      ? '<div class="empty"><div class="icon">&#9998;</div>Press <strong>Check</strong> or wait for auto-check.</div>'
+      : '<div class="empty"><div class="icon">&#10003;</div>No issues in this category.</div>';
+    return;
+  }
+  list.innerHTML='';
+  const tmap={grammar:'Grammar',spelling:'Spelling',punct:'Punctuation',style:'Style','word-order':'Word Order'};
+  const tcls={grammar:'tg',spelling:'ts',style:'tst',punct:'tp','word-order':'tw'};
+  vis.forEach(e=>{
+    const c=document.createElement('div');
+    c.className='ecard'; c.dataset.id=e.id;
+    c.innerHTML=`<div class="etag ${tcls[e.type]||'tg'}">${tmap[e.type]||e.type}</div>
+<div class="excerpt">"…<mark>${esc(e.wp)}</mark>…"</div>
+<div class="expl">${esc(e.ex)}</div>
+${e.sg?`<div class="sug"><strong>Suggestion:</strong> ${esc(e.sg)}</div>`:''}
+<div class="cactions">
+  <button class="cbtn acc" onclick="acceptS(${e.id},event)">Accept</button>
+  <button class="cbtn" onclick="dismissE(${e.id},event)">Dismiss</button>
+</div>`;
+    c.addEventListener('click',()=>jumpTo(e.id));
+    list.appendChild(c);
+  });
+}
+function setF(f){
+  filter=f;
+  document.querySelectorAll('.fb').forEach(b=>b.classList.toggle('on', b.dataset.f===f));
+  renderSB();
+}
+function hlCard(id){
+  document.querySelectorAll('.ecard').forEach(c=>c.classList.toggle('focused', +c.dataset.id===id));
+  const c=document.querySelector('.ecard[data-id="'+id+'"]');
+  if(c) c.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function jumpTo(id){
+  const e=errs.find(x=>x.id===id); if(!e) return;
+  const pos=ed.value.indexOf(e.wp);
+  if(pos!==-1){
+    ed.focus(); ed.selectionStart=pos; ed.selectionEnd=pos+e.wp.length;
+    const lh=parseFloat(getComputedStyle(ed).lineHeight)||30;
+    const lines=ed.value.slice(0,pos).split('\n').length;
+    ed.scrollTop=Math.max(0,(lines-3))*lh;
+  }
+  hlCard(id);
+}
+function dismissE(id,ev){ if(ev) ev.stopPropagation(); dismissed.add(id); persistChapterErrs(); rebuildHL(); renderSB(); }
+function acceptS(id,ev){
+  if(ev) ev.stopPropagation();
+  const e=errs.find(x=>x.id===id); if(!e||!e.sg) return;
+  const pos=ed.value.indexOf(e.wp);
+  if(pos===-1){ dismissed.add(id); persistChapterErrs(); renderSB(); return; }
+  ed.focus(); ed.selectionStart=pos; ed.selectionEnd=pos+e.wp.length;
+  document.execCommand('insertText',false,e.sg);
+  dismissed.add(id); persistChapterErrs(); rebuildHL(); renderSB(); updWC(); resize();
+}
+
+// ===================================================================
+// EXPORT / IMPORT
+// ===================================================================
+function openExport(){ document.getElementById('exp-modal').classList.remove('hide'); }
+function closeExp(){ document.getElementById('exp-modal').classList.add('hide'); }
+function dl(content,name,mime){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type:mime}));
+  a.download=name; a.click(); URL.revokeObjectURL(a.href);
+}
+function doExport(t){
+  persistActiveChapterText();
+  const c=getActiveChapter();
+  const text=c.text||'';
+  const safeName=(c.title||'story').replace(/[^a-z0-9\-_ ]/gi,'').trim().replace(/\s+/g,'-')||'chapter';
+
+  if(t==='txt') dl(text, safeName+'.txt','text/plain');
+  else if(t==='md') dl(text, safeName+'.md','text/markdown');
+  else if(t==='html'){
+    const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{font-family:Georgia,serif;font-size:17px;line-height:1.8;max-width:760px;margin:48px auto;padding:0 24px;color:#1a1714;}pre{white-space:pre-wrap;font-family:inherit;}</style></head><body><pre>${esc(text)}</pre></body></html>`;
+    dl(h, safeName+'.html','text/html');
+  } else if(t==='docx'){
+    const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body><pre style="font-family:Georgia,serif;font-size:12pt;line-height:1.8;white-space:pre-wrap;">${esc(text)}</pre></body></html>`;
+    dl(h, safeName+'-paste-to-word.html','text/html');
+    setTimeout(()=>alert('Open the downloaded file → Select All (Ctrl+A) → Copy → Paste into Microsoft Word → Save As .docx'),200);
+  } else if(t==='all'){
+    const full = chapters.map(ch=>`${ch.title||'Untitled'}\n${'='.repeat((ch.title||'Untitled').length)}\n\n${ch.text||''}`).join('\n\n\n');
+    dl(full, 'full-story.txt','text/plain');
+  } else if(t==='json'){
+    const backup = { chapters, notes, tlEvents, characters, edges, exportedAt:new Date().toISOString() };
+    dl(JSON.stringify(backup,null,2), 'storyforge-backup.json','application/json');
+  }
+  closeExp();
+}
+
+function handleImportFile(ev){
+  const file=ev.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!confirm('Import will replace all current chapters, notes, timeline, and characters. Continue?')) return;
+      if(data.chapters) chapters=data.chapters;
+      if(data.notes) notes=data.notes;
+      if(data.tlEvents) tlEvents=data.tlEvents;
+      if(data.characters) characters=data.characters;
+      if(data.edges) edges=data.edges;
+      persistChapters(); persistNotes(); persistTL(); persistChars(); persistEdges();
+      activeChapterId = chapters[0]?.id;
+      sv('sf_active_chapter', activeChapterId||'');
+      loadChapterIntoEditor(); renderChapterList(); renderNotes(); renderTimeline(); renderGraph();
+      setSt('Project imported');
+    }catch(err){
+      alert('Could not read this file as a StoryForge backup JSON.');
+      console.error(err);
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value='';
+}
+
+// ===== UTILS =====
+function setSt(msg,load=false){ document.getElementById('stxt').textContent=msg; document.getElementById('spin').classList.toggle('on',load); }
+
+</script>
+
+</body>
+</html>
