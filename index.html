@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>StoryForge</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"></script>
 <style>
   :root{
     --bg:#000000;--surface:#0a0a0a;--surface2:#141414;--surface3:#1c1c1c;--border:#2a2a2a;--border2:#383838;
@@ -64,6 +65,29 @@
   #restore-bar.hide{display:none;}
   #restore-bar button{font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--accent);background:var(--accent);color:#000;cursor:pointer;font-weight:600;}
   #restore-bar .dbtn{background:none;color:var(--text2);border-color:var(--border);}
+
+  #float-restore{position:fixed;bottom:16px;right:16px;width:40px;height:40px;border-radius:50%;background:var(--surface2);border:1px solid var(--border2);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow);z-index:1500;transition:all .15s;}
+  #float-restore:hover{background:var(--accent-dim);color:var(--accent);border-color:var(--accent);}
+  #float-restore svg{width:18px;height:18px;}
+  #float-restore-panel{position:fixed;bottom:64px;right:16px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;width:240px;z-index:1500;font-family:system-ui,sans-serif;}
+  #float-restore-panel.hide{display:none;}
+  #float-restore-panel h4{font-size:12px;color:var(--text);margin-bottom:6px;}
+  #float-restore-panel p{font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.5;}
+  #float-restore-panel .mrow{display:flex;gap:6px;}
+  #float-restore-panel button{flex:1;font-size:11px;padding:6px;border-radius:4px;border:1px solid var(--border);background:var(--surface3);color:var(--text2);cursor:pointer;}
+  #float-restore-panel button.pri{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600;}
+
+  #tour-overlay{position:fixed;inset:0;z-index:3000;pointer-events:none;}
+  #tour-overlay.hide{display:none;}
+  #tour-highlight{position:fixed;border:2px solid var(--accent);border-radius:8px;box-shadow:0 0 0 4000px rgba(0,0,0,.6);pointer-events:none;transition:all .2s;}
+  #tour-box{position:fixed;width:280px;background:var(--panel);border:1px solid var(--border2);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;pointer-events:all;font-family:system-ui,sans-serif;transition:all .2s;}
+  #tour-box h4{font-size:13px;color:var(--accent);margin-bottom:6px;}
+  #tour-box p{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:10px;}
+  #tour-box .trow{display:flex;justify-content:space-between;align-items:center;}
+  #tour-box .tprog{font-size:11px;color:var(--text3);}
+  #tour-box .tbtns{display:flex;gap:6px;}
+  #tour-box button{font-size:11px;padding:5px 10px;border-radius:4px;border:1px solid var(--border);background:var(--surface3);color:var(--text2);cursor:pointer;}
+  #tour-box button.pri{background:var(--accent);color:#000;border-color:var(--accent);font-weight:600;}
 
   #main{display:flex;flex:1;overflow:hidden;position:relative;}
 
@@ -160,6 +184,12 @@
   .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:2000;}
   .modal-bg.hide{display:none;}
   .mbox{background:var(--surface2);border:1px solid var(--border2);border-radius:10px;padding:24px 28px;max-width:420px;width:90%;box-shadow:var(--shadow);}
+  #guide-modal .mbox{max-width:560px;max-height:80vh;overflow-y:auto;}
+  .guide-section{margin-bottom:18px;}
+  .guide-section h3{font-size:13px;color:var(--accent);margin-bottom:8px;font-family:system-ui,sans-serif;}
+  .guide-row{display:flex;gap:10px;padding:6px 0;font-size:12.5px;font-family:system-ui,sans-serif;color:var(--text2);border-bottom:1px solid var(--border);}
+  .guide-row:last-child{border-bottom:none;}
+  .guide-row b{color:var(--text);min-width:110px;flex-shrink:0;}
   .mbox h2{font-size:16px;color:var(--text);margin-bottom:8px;font-family:system-ui,sans-serif;}
   .mbox p{font-size:13px;color:var(--text2);margin-bottom:14px;font-family:system-ui,sans-serif;line-height:1.5;}
   .minput{width:100%;background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font-size:13px;font-family:monospace;padding:9px 11px;outline:none;margin-bottom:12px;}
@@ -278,7 +308,62 @@
 </div>
 
 <!-- IMPORT MODAL -->
+<div id="imp-modal" class="modal-bg hide">
+  <div class="mbox">
+    <h2>Import</h2>
+    <p>Text/Markdown/Word files are added as a new chapter. Project Backup replaces everything.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+      <button class="mbtn pri" onclick="triggerImport('chapter-text')">Text / Markdown (.txt, .md) — new chapter</button>
+      <button class="mbtn sec" onclick="triggerImport('chapter-docx')">Word (.docx) — new chapter</button>
+      <button class="mbtn sec" onclick="triggerImport('project')">Full Project Backup (.json) — replaces all</button>
+    </div>
+    <button class="mbtn sec" onclick="document.getElementById('imp-modal').classList.add('hide')">Cancel</button>
+  </div>
+</div>
 <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="handleImportFile(event)">
+<input type="file" id="import-file-input-text" accept=".txt,.md" style="display:none" onchange="handleImportTextFile(event)">
+<input type="file" id="import-file-input-docx" accept=".docx" style="display:none" onchange="handleImportDocxFile(event)">
+
+<!-- GUIDE MODAL -->
+<div id="guide-modal" class="modal-bg hide">
+  <div class="mbox">
+    <h2>Guide</h2>
+    <p>What everything does, in one place.</p>
+
+    <div class="guide-section">
+      <h3>Getting started</h3>
+      <div class="guide-row"><b>API Key</b><span>Paste an OpenRouter key so Check can call an AI model. Stored only in your browser.</span></div>
+      <div class="guide-row"><b>Model dropdown</b><span>4 curated picks (2 free, 2 paid) fetched live from OpenRouter, plus "Custom model…" to type any model ID yourself.</span></div>
+    </div>
+
+    <div class="guide-section">
+      <h3>Writing</h3>
+      <div class="guide-row"><b>Auto</b><span>Checks your text automatically as you pause typing.</span></div>
+      <div class="guide-row"><b>Check</b><span>Runs a check right now (Ctrl+Enter).</span></div>
+      <div class="guide-row"><b>Clear</b><span>Removes all highlight marks from the current chapter.</span></div>
+      <div class="guide-row"><b>Focus</b><span>Hides sidebars and tabs for distraction-free writing.</span></div>
+      <div class="guide-row"><b>Font size</b><span>Adjusts editor text size.</span></div>
+    </div>
+
+    <div class="guide-section">
+      <h3>Organizing your story</h3>
+      <div class="guide-row"><b>Chapters</b><span>Left sidebar. Add, rename, reorder, delete chapters.</span></div>
+      <div class="guide-row"><b>Notes & World</b><span>Freeform sections for locations, rules, lore — always accessible, separate from chapters.</span></div>
+      <div class="guide-row"><b>Timeline</b><span>Plot events in order, optionally linked to characters.</span></div>
+      <div class="guide-row"><b>Characters</b><span>Character cards with relationships — use Link Mode to connect two characters.</span></div>
+    </div>
+
+    <div class="guide-section">
+      <h3>Data</h3>
+      <div class="guide-row"><b>Export</b><span>Save as .txt, .md, .html, Word (paste method), full story, or a full JSON backup.</span></div>
+      <div class="guide-row"><b>Import</b><span>Bring in a .txt/.md/.docx file as a new chapter, or restore a full JSON project backup.</span></div>
+      <div class="guide-row"><b>Restore icon</b><span>Bottom-right corner. Recovers your last autosaved draft if the tab closed unexpectedly.</span></div>
+      <div class="guide-row"><b>Theme</b><span>Switch dark/light. Your choice is remembered.</span></div>
+    </div>
+
+    <button class="mbtn sec" onclick="closeGuide()">Close</button>
+  </div>
+</div>
 
 <!-- CHARACTER FORM MODAL -->
 <div id="char-form-modal" class="modal-bg hide">
@@ -337,6 +422,35 @@
   <button class="dbtn" onclick="document.getElementById('restore-bar').classList.add('hide')">Dismiss</button>
 </div>
 
+<!-- FLOATING RESTORE BUTTON -->
+<button id="float-restore" onclick="toggleFloatRestore()" title="Restore last saved session">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+</button>
+<div id="float-restore-panel" class="hide">
+  <h4>Restore last session</h4>
+  <p id="float-restore-desc">Loads the last autosaved draft into the current chapter, overwriting what's in the editor now.</p>
+  <div class="mrow">
+    <button onclick="toggleFloatRestore()">Cancel</button>
+    <button class="pri" onclick="restoreDraft(); toggleFloatRestore();">Restore</button>
+  </div>
+</div>
+
+<!-- FIRST-VISIT TOUR -->
+<div id="tour-overlay" class="hide">
+  <div id="tour-highlight"></div>
+  <div id="tour-box">
+    <h4 id="tour-title"></h4>
+    <p id="tour-text"></p>
+    <div class="trow">
+      <span class="tprog" id="tour-progress"></span>
+      <div class="tbtns">
+        <button onclick="endTour()">Skip</button>
+        <button class="pri" id="tour-next" onclick="tourNext()">Next</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- TOOLBAR -->
 <div id="toolbar">
   <span class="tb-title">StoryForge</span>
@@ -368,8 +482,11 @@
   <button class="tb-btn" onclick="openExport()">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Export
   </button>
-  <button class="tb-btn" onclick="document.getElementById('import-file-input').click()">
+  <button class="tb-btn" onclick="document.getElementById('imp-modal').classList.remove('hide')">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Import
+  </button>
+  <button class="tb-btn" onclick="openGuide()" title="Guide">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Guide
   </button>
   <div id="status-area">
     <span id="save-dot" title="Autosave"></span>
@@ -532,50 +649,62 @@ const tip=document.getElementById('tip');
 const chTitleInput=document.getElementById('ch-title-input');
 
 // ===================================================================
-// MODEL LIST — probed live against OpenRouter; only models that
-// actually respond successfully right now are offered.
+// MODEL LIST — fetched live from OpenRouter's /models endpoint.
+// No hardcoded model IDs: the free-tier lineup rotates constantly,
+// so we always ask OpenRouter what's actually available right now.
 // ===================================================================
-const FREE_CANDIDATES=[
-  {id:'meta-llama/llama-3.3-70b-instruct:free',name:'Llama 3.3 70B'},
-  {id:'google/gemini-2.0-flash-exp:free',name:'Gemini 2.0 Flash'},
-  {id:'deepseek/deepseek-chat:free',name:'DeepSeek Chat'},
-  {id:'deepseek/deepseek-r1:free',name:'DeepSeek R1'},
-  {id:'qwen/qwen-2.5-72b-instruct:free',name:'Qwen 2.5 72B'},
-  {id:'mistralai/mistral-small-3.1-24b-instruct:free',name:'Mistral Small 3.1'},
-  {id:'meta-llama/llama-4-scout:free',name:'Llama 4 Scout'},
-  {id:'nvidia/llama-3.1-nemotron-70b-instruct:free',name:'Nemotron 70B'}
+const HARDCODED_FALLBACK=[
+  {id:'openai/gpt-oss-120b:free',name:'GPT-OSS 120B (free)'},
+  {id:'meta-llama/llama-3.3-70b-instruct:free',name:'Llama 3.3 70B (free)'},
+  {id:'openai/gpt-4o-mini',name:'GPT-4o Mini (cheap)'},
+  {id:'anthropic/claude-3.5-haiku',name:'Claude 3.5 Haiku (reliable)'}
 ];
-const PAID_CANDIDATES=[
-  {id:'openai/gpt-4o-mini',name:'GPT-4o Mini'},
-  {id:'google/gemini-2.5-flash',name:'Gemini 2.5 Flash'},
-  {id:'anthropic/claude-3.5-haiku',name:'Claude 3.5 Haiku'}
-];
-async function probeModel(id){
-  try{
-    const r=await fetch('https://openrouter.ai/api/v1/chat/completions',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey,'HTTP-Referer':'https://023b.github.io/storyforge','X-Title':'StoryForge'},
-      body:JSON.stringify({model:id, messages:[{role:'user',content:'hi'}], max_tokens:1})
-    });
-    return r.ok;
-  }catch(e){ return false; }
-}
+// Known-strong providers, used to rank free candidates so the picked
+// "best free" model is more likely to be genuinely capable rather than
+// a tiny/experimental one that happens to be free.
+const STRONG_PROVIDERS=['openai','anthropic','google','meta-llama','nvidia','qwen','deepseek','mistralai','tencent'];
 async function loadModelList(){
   const sel=document.getElementById('mdl-sel');
   const savedModel=ls('sf_model')||'';
   sel.innerHTML='<option value="">Loading models…</option>';
-  if(!apiKey){
-    // No key yet — show unverified fallback list, will re-verify once key is saved
-    populateModelSelect(FREE_CANDIDATES.slice(0,5), savedModel);
-    return;
-  }
-  const results=await Promise.all([...FREE_CANDIDATES, ...PAID_CANDIDATES].map(async m=>({...m, ok:await probeModel(m.id)})));
-  let free=results.filter((m,i)=>m.ok && i<FREE_CANDIDATES.length).slice(0,4);
-  let paid=results.filter((m,i)=>m.ok && i>=FREE_CANDIDATES.length).slice(0,3);
-  free=free.map(m=>({...m,name:m.name+' (free)'}));
-  const models=[...free, ...paid];
-  if(!models.length){
-    setSt('No models responded — try Custom model');
+  let models=[];
+  try{
+    const r=await fetch('https://openrouter.ai/api/v1/models');
+    if(!r.ok) throw new Error('bad status');
+    const data=await r.json();
+    const all=(data.data||[]).filter(m=>!m.id.startsWith('openrouter/')); // skip meta-routers
+    const free=all.filter(m=>{
+      const p=m.pricing||{};
+      return m.id.endsWith(':free') || (parseFloat(p.prompt||'1')===0 && parseFloat(p.completion||'1')===0);
+    });
+    const paid=all.filter(m=>{
+      const p=m.pricing||{};
+      return !m.id.endsWith(':free') && parseFloat(p.prompt||'0')>0;
+    }).sort((a,b)=>parseFloat(a.pricing.prompt)-parseFloat(b.pricing.prompt)); // cheapest first
+
+    // Tier 1: best free — prefer large/strong-provider models over tiny ones
+    const freeStrong=free.filter(m=>STRONG_PROVIDERS.includes(m.id.split('/')[0]));
+    const bestFree=(freeStrong.length?freeStrong:free).sort((a,b)=>(b.context_length||0)-(a.context_length||0))[0];
+
+    // Tier 2: a second, different free model (fast/small alternative)
+    const secondFree=free.find(m=>m.id!==bestFree?.id && STRONG_PROVIDERS.includes(m.id.split('/')[0])) || free.find(m=>m.id!==bestFree?.id);
+
+    // Tier 3: cheap decent paid — known solid names near the bottom of the price curve
+    const preferredCheap=['openai/gpt-4o-mini','google/gemini-2.5-flash','deepseek/deepseek-chat'];
+    const cheapPaid=paid.find(m=>preferredCheap.includes(m.id)) || paid[0];
+
+    // Tier 4: a stronger paid option for cases cheap models botch (e.g. tricky punctuation/edge cases)
+    const preferredStrong=['anthropic/claude-3.5-haiku','openai/gpt-4o','google/gemini-2.5-flash'];
+    const strongPaid=paid.find(m=>preferredStrong.includes(m.id) && m.id!==cheapPaid?.id) || paid.find(m=>m.id!==cheapPaid?.id);
+
+    const picks=[bestFree, secondFree, cheapPaid, strongPaid].filter(Boolean);
+    models=picks.map(m=>({
+      id:m.id,
+      name:m.name+(m.id.endsWith(':free')?' (free)':'')
+    }));
+    if(!models.length) throw new Error('empty');
+  }catch(e){
+    models=HARDCODED_FALLBACK;
   }
   populateModelSelect(models, savedModel);
 }
@@ -633,7 +762,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   const draft=ls('sf_crash_draft');
   if(draft && draft.trim() && draft!==getActiveChapter().text) document.getElementById('restore-bar').classList.remove('hide');
   if(!apiKey) document.getElementById('api-modal').classList.remove('hide');
-  else{ setSt('Ready'); updKeyBtn(); }
+  else{ setSt('Ready'); updKeyBtn(); maybeStartTour(); }
 
   ed.addEventListener('input', onInput);
   ed.addEventListener('keydown', onKD);
@@ -673,6 +802,23 @@ function flashDot(){
 function restoreDraft(){
   const s=ls('sf_crash_draft');
   if(s){ ed.value=s; resize(); updWC(); rebuildHL(); document.getElementById('restore-bar').classList.add('hide'); setSt('Draft restored'); }
+}
+function toggleFloatRestore(){
+  const panel=document.getElementById('float-restore-panel');
+  const opening=panel.classList.contains('hide');
+  panel.classList.toggle('hide');
+  if(opening){
+    const s=ls('sf_crash_draft');
+    const desc=document.getElementById('float-restore-desc');
+    const btn=panel.querySelector('.pri');
+    if(s && s.trim()){
+      desc.textContent='Loads the last autosaved draft into the current chapter, overwriting what\'s in the editor now.';
+      btn.disabled=false; btn.style.opacity=1;
+    }else{
+      desc.textContent='No saved draft found yet — this fills in once you start writing.';
+      btn.disabled=true; btn.style.opacity=0.4;
+    }
+  }
 }
 window.addEventListener('beforeunload', ()=>{ persistActiveChapterText(); if(ed.value.trim()) sv('sf_crash_draft', ed.value); });
 window.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='hidden'){ persistActiveChapterText(); if(ed.value.trim()) sv('sf_crash_draft', ed.value); } });
@@ -1194,10 +1340,13 @@ function saveKey(){
   if(!v||!v.startsWith('sk-')){ alert('Enter a valid OpenRouter key (starts with sk-)'); return; }
   apiKey=v; sv('sf_or_api_key', v);
   document.getElementById('api-modal').classList.add('hide');
-  setSt('Verifying available models…'); updKeyBtn();
-  loadModelList().then(()=>setSt('Ready'));
+  setSt('Ready'); updKeyBtn();
+  maybeStartTour();
 }
-function skipKey(){ document.getElementById('api-modal').classList.add('hide'); }
+function skipKey(){ document.getElementById('api-modal').classList.add('hide'); maybeStartTour(); }
+function maybeStartTour(){
+  if(!ls('sf_tour_done')) setTimeout(startTour, 300);
+}
 function showKeyModal(){ document.getElementById('api-in').value=apiKey||''; document.getElementById('api-modal').classList.remove('hide'); document.getElementById('api-in').focus(); }
 function updKeyBtn(){ const b=document.getElementById('key-btn'); if(apiKey){ b.style.color='var(--accent)'; b.title='Key set — click to change'; } else b.style.color=''; }
 
@@ -1367,8 +1516,56 @@ function acceptS(id,ev){
 // ===================================================================
 // EXPORT / IMPORT
 // ===================================================================
+function openGuide(){ document.getElementById('guide-modal').classList.remove('hide'); }
+function closeGuide(){ document.getElementById('guide-modal').classList.add('hide'); }
+
+// ===================================================================
+// FIRST-VISIT TOUR
+// ===================================================================
+const TOUR_STEPS=[
+  {sel:'#key-btn', title:'1. Connect OpenRouter', text:'Paste a free OpenRouter API key here so Check can reach an AI model.'},
+  {sel:'#mdl-sel', title:'2. Pick a model', text:'4 live-fetched options — 2 free, 2 paid — or choose "Custom model…" to type any OpenRouter model ID.'},
+  {sel:'#btn-auto', title:'3. Auto-check', text:'Checks your writing automatically as you pause. Toggle off if you prefer manual control.'},
+  {sel:'#vt-notes', title:'4. Notes & World, Timeline, Characters', text:'Separate tabs for worldbuilding, plot events, and character relationships — always alongside your chapters.'},
+  {sel:'#thm-btn', title:'5. Theme', text:'Switch dark/light anytime. Your pick is remembered.'},
+];
+let tourIdx=0;
+function startTour(){
+  tourIdx=0;
+  document.getElementById('tour-overlay').classList.remove('hide');
+  showTourStep();
+}
+function showTourStep(){
+  const step=TOUR_STEPS[tourIdx];
+  const target=document.querySelector(step.sel);
+  const box=document.getElementById('tour-box');
+  if(!target){ endTour(); return; }
+  const r=target.getBoundingClientRect();
+  document.getElementById('tour-title').textContent=step.title;
+  document.getElementById('tour-text').textContent=step.text;
+  document.getElementById('tour-progress').textContent=(tourIdx+1)+' / '+TOUR_STEPS.length;
+  document.getElementById('tour-next').textContent = tourIdx===TOUR_STEPS.length-1 ? 'Done' : 'Next';
+  const hl=document.getElementById('tour-highlight');
+  hl.style.top=(r.top-4)+'px'; hl.style.left=(r.left-4)+'px';
+  hl.style.width=(r.width+8)+'px'; hl.style.height=(r.height+8)+'px';
+  let top=r.bottom+12;
+  if(top+140>window.innerHeight) top=Math.max(12, r.top-152);
+  let left=Math.min(Math.max(12, r.left), window.innerWidth-296);
+  box.style.top=top+'px'; box.style.left=left+'px';
+}
+function tourNext(){
+  tourIdx++;
+  if(tourIdx>=TOUR_STEPS.length){ endTour(); return; }
+  showTourStep();
+}
+function endTour(){
+  document.getElementById('tour-overlay').classList.add('hide');
+  sv('sf_tour_done','1');
+}
 function openExport(){ document.getElementById('exp-modal').classList.remove('hide'); }
 function closeExp(){ document.getElementById('exp-modal').classList.add('hide'); }
+
+
 function dl(content,name,mime){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([content],{type:mime}));
@@ -1399,6 +1596,50 @@ function doExport(t){
   closeExp();
 }
 
+function triggerImport(kind){
+  document.getElementById('imp-modal').classList.add('hide');
+  if(kind==='project') document.getElementById('import-file-input').click();
+  else if(kind==='chapter-text') document.getElementById('import-file-input-text').click();
+  else if(kind==='chapter-docx') document.getElementById('import-file-input-docx').click();
+}
+function addChapterFromText(title, text){
+  const n={id:uid(), title:title, text:text, errs:[], dismissed:[]};
+  chapters.push(n);
+  persistChapters();
+  selectChapter(n.id);
+  renderChapterList();
+  setSt('Imported as new chapter');
+}
+function handleImportTextFile(ev){
+  const file=ev.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    const title=file.name.replace(/\.(txt|md)$/i,'');
+    addChapterFromText(title, e.target.result);
+  };
+  reader.onerror=()=>alert('Could not read this file.');
+  reader.readAsText(file);
+  ev.target.value='';
+}
+async function handleImportDocxFile(ev){
+  const file=ev.target.files[0];
+  if(!file) return;
+  if(typeof mammoth==='undefined'){ alert('Word import library failed to load — check your connection and retry.'); ev.target.value=''; return; }
+  setSt('Converting .docx…', true);
+  try{
+    const arrayBuffer=await file.arrayBuffer();
+    const result=await mammoth.extractRawText({arrayBuffer});
+    const title=file.name.replace(/\.docx$/i,'');
+    addChapterFromText(title, result.value);
+  }catch(err){
+    alert('Could not read this .docx file. It may be corrupted or password-protected.');
+    console.error(err);
+  }finally{
+    document.getElementById('spin').classList.remove('on');
+    ev.target.value='';
+  }
+}
 function handleImportFile(ev){
   const file=ev.target.files[0];
   if(!file) return;
